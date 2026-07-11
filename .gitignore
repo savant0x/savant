@@ -1,0 +1,91 @@
+# Agent runtime state — not source code
+dev/session-summaries/*
+dev/fids/*
+!dev/fids/.gitkeep
+!dev/fids/archive/
+!dev/fids/archive/.gitkeep
+!.gitkeep
+
+# Keep LEARNINGS.md tracked — cross-session knowledge
+!dev/LEARNINGS.md
+
+# Heavy reference material + research notes — gitignored, not shipped
+resources/
+prompts/
+
+# Firebase
+firebase-debug.log
+.firebaserc
+firebase.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Rust / Cargo
+target/
+release/
+debug/
+*.rs.bk
+.fingerprint/
+.cargo/
+
+# Tauri 2
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# Node / Vite / Renderer — NOT Next.js (explicitly forbidden in ECHO Phase 1)
+node_modules/
+dist/
+out/
+build/
+.vite/
+*.tsbuildinfo
+.eslintcache
+.next/
+.turbo/
+.parcel-cache/
+
+# Local environment — NEVER commit secrets
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Database — Phase 2+ SQLite WAL artifacts
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Logs / runtime output
+logs/
+*.log
+*.tmp
+
+# Editor / OS / Dev environment
+.vscode/
+.idea/
+.cursor/
+*.swp
+*.swo
+
+# Local agent hotlink files (runtime, not source)
+.vera
+.savant
+AGENTS.md  # ignored at root if accidentally created by auto-tools; project ECHO.md is authoritative
+
+# Vault secrets — NEVER commit (defense in depth)
+auth.json
+vault.json
+master_key.json
+*.mkey
+
+# npm runtime cache
+.npm
+
+# Local Rust build cache
+.cargo/

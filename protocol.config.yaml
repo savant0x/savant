@@ -1,0 +1,77 @@
+# Protocol Config — Project-specific configuration for ECHO Protocol
+#
+# QUICK START: Change these 3 lines for your project:
+#   1. language:       "rust" | "typescript" | "python" | "go" | "java" | "csharp"
+#   2. commands.build: your compile/build command
+#   3. commands.test:  your test runner command
+
+project:
+  name: "savant-core"
+  description: "Tauri 2 + React 19 + HeroUI v3 alpha desktop app — proactive AI assistant. Phase 1 in flight."
+  version: "0.0.1"
+
+protocol:
+  version: "0.1.1"
+  strict_mode: true  # true = all 15 laws active (default), false = core 4 laws only
+
+language: "rust"
+
+commands:
+  build: "cargo tauri build"
+  dev: "cargo tauri dev"
+  test: "cargo test --workspace && npm test"
+  type_check: "cargo check --workspace && tsc --noEmit"
+  lint: "cargo clippy --workspace --all-targets -- -D warnings && tsc --noEmit"
+  format: "cargo fmt --all && prettier --write ."
+  clean: "cargo clean && rm -rf dist/ node_modules/.vite/ src-tauri/target/"
+
+paths:
+  src: "src/"
+  tests: "tests/"
+  docs: "docs/"
+  dev: "dev/"
+  fids: "dev/fids/"
+  fids_archive: "dev/fids/archive/"
+  session_summaries: "dev/session-summaries/"
+  learnings: "dev/LEARNINGS.md"
+  rust_workspace_root: "."
+  rust_daemon: "src-tauri/"
+  renderer: "src/"
+  vault_dir_win: "%APPDATA%/savant/"
+  vault_dir_unix: "~/.config/savant/"
+
+quality:
+  max_file_lines: 300
+  max_function_lines: 50
+  max_line_length: 100
+  max_complexity: 10
+  max_params: 4
+  max_comment_density: 0.33
+  max_nesting_depth: 3
+
+# Naming rules: see coding-standards/{language}.md
+
+testing:
+  fuzz_enabled: false
+  mutation_enabled: false
+  coverage_threshold: 80
+  test_timeout: 30
+  parallel_tests: true
+
+fid:
+  auto_create: true
+  severity_levels: ["critical", "high", "medium", "low"]
+  max_open_fids: 20
+
+perfection_loop:
+  max_iterations: 10
+  change_threshold: 0.10
+  convergence_threshold: 0.02
+  convergence_passes: 2
+  oscillation_limit: 3
+
+session:
+  auto_summary: true
+  summary_interval: 30
+  max_session_hours: 4
+  autonomy_level: 3  # 1=Guided, 2=Supervised, 3=Autonomous (default)

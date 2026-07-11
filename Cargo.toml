@@ -1,0 +1,49 @@
+[workspace]
+resolver = "2"
+members = ["src-tauri"]
+
+[workspace.package]
+version = "0.2.0"
+edition = "2021"
+license = "MIT"
+authors = ["Spencer — Vera (agent, codebuff/minimax-m3)"]
+rust-version = "1.86"
+description = "Savant proactive AI agent (Tauri 2 + React 19)"
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"
+
+# Tauri 2 (Phase 1: plain commands + Result types; tauri-specta v2 added
+# in Phase 2 when typed bindings are wired)
+tauri = { version = "2", features = [] }
+tauri-build = { version = "2", features = [] }
+
+# Networking
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+schemars = "0.8"
+
+# Master-key crypto (ed25519, mirrors savant-backup crates/core/src/crypto.rs)
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+rand = "0.8"
+hex = "0.4"
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+dotenvy = "0.15"
+uuid = { version = "1", features = ["v4", "serde"] }
+thiserror = "1"
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"

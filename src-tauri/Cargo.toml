@@ -1,0 +1,51 @@
+[package]
+name = "savant-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+description = "Savant Phase 1 — Tauri 2 daemon (vault + OpenRouter inference)"
+readme = "../README.md"
+
+[lib]
+name = "savant_core"
+path = "src/lib.rs"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "savant-core"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { workspace = true }
+
+[dependencies]
+tauri = { workspace = true }
+
+tokio = { workspace = true }
+async-trait = { workspace = true }
+reqwest = { workspace = true }
+
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+ed25519-dalek = { workspace = true }
+rand = { workspace = true }
+hex = { workspace = true }
+
+chrono = { workspace = true }
+dotenvy = { workspace = true }
+uuid = { workspace = true }
+
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# Note: schemars is reserved for Phase 2 specta bindings; not pulled in Phase 1.
+
+[dev-dependencies]
+tempfile = "3"
+tokio-test = "0.4"
+mockito = "1"
