@@ -1,14 +1,16 @@
+"use client";
+
 import { useEffect, useState } from "react";
-import MasterKeySetup from "./components/MasterKeySetup";
-import InferenceSmokeTest from "./components/InferenceSmokeTest";
-import { listProfiles, type ProfileSummary } from "./lib/ipc";
+import { listProfiles, type ProfileSummary } from "@/lib/ipc";
+import MasterKeySetup from "@/components/MasterKeySetup";
+import InferenceSmokeTest from "@/components/InferenceSmokeTest";
 
 type AppState =
   | { kind: "loading" }
   | { kind: "needs-setup" }
   | { kind: "ready"; profiles: ProfileSummary[] };
 
-export default function App() {
+export default function Home() {
   const [state, setState] = useState<AppState>({ kind: "loading" });
 
   useEffect(() => {
@@ -23,7 +25,7 @@ export default function App() {
         hasOpenrouter ? { kind: "ready", profiles } : { kind: "needs-setup" }
       );
     } catch (err) {
-      console.error("[App] listProfiles failed:", err);
+      console.error("[Home] listProfiles failed:", err);
       setState({ kind: "needs-setup" });
     }
   }

@@ -13,12 +13,30 @@
 
 ## 30-Second Quickstart
 
+There are two ways to run Savant. Pick the one that matches what you're doing.
+
+### Option A — Browser preview (no Tauri install required)
+
+```bash
+git clone https://github.com/savant0x/Savant
+cd Savant
+npm install                                # Next.js 15 + React 19 + HeroUI v3 alpha
+npm run dev                                # → http://localhost:3000
+```
+
+Open `http://localhost:3000` in any browser. Tauri IPC is mocked via
+`@tauri-apps/api/mocks` (installed in `src/lib/mock-ipc.ts`), so the
+dashboard renders and `MasterKeySetup` + `InferenceSmokeTest` work end-to-end
+without a Tauri host. Fast visual iteration on the UI; no Rust rebuild loop.
+
+### Option B — Tauri desktop (real IPC)
+
 ```bash
 git clone https://github.com/savant0x/Savant
 cd Savant
 cargo install tauri-cli --version "^2.0"   # v2.10.1 verified on Windows 11 dev box
-npm install                                # Vite 7 + React 19 + HeroUI v3 alpha
-cargo tauri dev                            # launches the desktop window
+npm install                                # Next.js 15 + React 19 + HeroUI v3 alpha
+cargo tauri dev                            # launches the desktop window (Next.js dev server on :3000)
 ```
 
 On first launch:
@@ -36,6 +54,11 @@ On first launch:
 That round-trip — UI → IPC → daemon → inference → response → UI — is the
 v0.0.1 proof point and the integration test for every subsequent phase.
 
+> **Mock vs real IPC:** in browser preview (Option A) the `invoke()` calls are
+> intercepted by `src/lib/mock-ipc.ts` and return synthetic data. In the
+> Tauri desktop (Option B), `window.__TAURI_INTERNALS__` is set, the mock
+> self-disables, and the real Rust daemon handles every call.
+
 ---
 
 ## What's in this repo
@@ -43,7 +66,7 @@ v0.0.1 proof point and the integration test for every subsequent phase.
 | Path                          | Purpose                                                                                              |
 | :---------------------------- | :--------------------------------------------------------------------------------------------------- |
 | `src-tauri/`                  | Tauri 2 Rust daemon: master-key vault, OpenRouter client, IPC command surface                       |
-| `src/`                        | React 19 + HeroUI v3 alpha renderer (plain Vite, no Next.js, no Svelte)                             |
+| `src/`                        | React 19 + HeroUI v3 alpha renderer on Next.js 15 App Router (file-based routing, static export)   |
 | `src-tauri/src/security/`     | Generalized multi-profile `Vault` (5-strategy cascade)                                              |
 | `src-tauri/src/inference/`    | `openrouter` provider client (reqwest chat-completions)                                              |
 | `ECHO.md`                     | The protocol this project obeys. 15 Laws + Perfection Loop FSM + FID lifecycle + circuit breakers    |
@@ -64,7 +87,7 @@ Heavy reference material and research notes are gitignored:
 ## Architecture (Phase 1 + Phase 2 slots)
 
 ```text
-[ React 19 + HeroUI v3 renderer (Vite) ] <-- IPC --> [ Tauri 2 Rust daemon ]
+[ Next.js 15 + React 19 + HeroUI v3 renderer (App Router, static export) ] <-- IPC --> [ Tauri 2 Rust daemon ]
                                                           |
                                                           +-- master-key vault (auth.json, OS-specific path)
                                                           +-- OpenRouter client (reqwest, Bearer auth)

@@ -1,10 +1,19 @@
+"use client";
+
 // Phase 1 IPC wrappers — minimal type annotations that match the Rust types
 // in src-tauri/src/security/master_key.rs (ProfileSummary) and the cmd return
 // signatures in src-tauri/src/lib.rs. tauri-specta v2 in Phase 2 will replace
 // these hand-written types with auto-generated bindings — see FID-001 "Q-Next"
 // section for that work item.
+//
+// Browser-preview mode: `setupMockIPC()` installs @tauri-apps/api/mocks so the
+// renderer works in any browser without a Tauri host. The mock is a no-op
+// inside the Tauri webview (window.__TAURI_INTERNALS__ is set there).
 
 import { invoke } from "@tauri-apps/api/core";
+import { setupMockIPC } from "./mock-ipc";
+
+setupMockIPC();
 
 export type ProfileSummary = {
   name: string;

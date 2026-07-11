@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { Button, Card, TextArea } from "@heroui/react";
 import { inferOpenrouter, type ProfileSummary } from "../lib/ipc";

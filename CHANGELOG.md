@@ -22,12 +22,12 @@ Tauri 2 + React 19 + HeroUI v3 alpha. Phase 1 of a multi-phase build.
 
 ### Added
 
-- **Tauri 2 + React 19 + HeroUI v3 alpha scaffolding** — desktop shell, renderer, IPC command surface.
+- **Tauri 2 + Next.js 15 + React 19 + HeroUI v3 alpha scaffolding** — desktop shell, renderer (App Router + static export), IPC command surface.
 - **`src-tauri/src/security/master_key.rs`** — generalized multi-profile `Vault` (5-strategy cascade: env vars → cwd `.env` → exe `.env` → JSON vault file → UI prompt).
 - **Vault storage paths:** Windows `%APPDATA%/savant/auth.json`; Unix `~/.config/savant/auth.json`. Unix perms enforced 0o600 (Windows DPAPI deferred to Phase 5).
 - **`src-tauri/src/inference/openrouter.rs`** — reqwest-based chat-completions client; reads `openrouter-default` profile from vault; returns `Result<String, InferenceError>`.
 - **Three Tauri IPC commands:** `setup_master_key`, `infer_openrouter`, `vault_list_profiles`.
-- **HeroUI v3 alpha integration** — CSS-first, no Provider wrapper required, no Tailwind plugin required.
+- **HeroUI v3 alpha integration** — CSS-first, no Provider wrapper required, no Tailwind plugin required. Interactive components use `'use client'` directives for Next.js App Router compatibility.
 - **Smoke-test screen** — first end-to-end test of the build pipeline; proves UI → IPC → daemon → OpenRouter → response → UI round-trip.
 - **FID-2026-07-11-001** — Phase 1 FID (`dev/fids/0001-ui-first-phase.md`).
 - **FID-2026-07-11-002** — initial release FID (`dev/fids/0002-initial-release.md`).
@@ -42,7 +42,7 @@ Tauri 2 + React 19 + HeroUI v3 alpha. Phase 1 of a multi-phase build.
 ### Toolchain confirmed (Windows 11 dev box)
 
 - `rustc 1.94.0` + `cargo 1.94.0` + `tauri-cli 2.10.1`
-- `node v25.2.1` + `npm 11.13.0`
+- `node v25.2.1` + `npm 11.13.0` + `next ^15.0.0` (App Router, static export)
 - HeroUI v3 alpha caveat: pin via lockfile; alpha API may shift.
 
 ### Reference (non-code)

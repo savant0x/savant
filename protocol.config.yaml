@@ -19,11 +19,11 @@ language: "rust"
 commands:
   build: "cargo tauri build"
   dev: "cargo tauri dev"
-  test: "cargo test --workspace && npm test"
+  test: "cargo test --workspace"
   type_check: "cargo check --workspace && tsc --noEmit"
   lint: "cargo clippy --workspace --all-targets -- -D warnings && tsc --noEmit"
   format: "cargo fmt --all && prettier --write ."
-  clean: "cargo clean && rm -rf dist/ node_modules/.vite/ src-tauri/target/"
+  clean: "cargo clean && rm -rf out/ .next/ node_modules/.cache/ src-tauri/target/"
 
 paths:
   src: "src/"

@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { Button, Input } from "@heroui/react";
 import { saveMasterKey } from "../lib/ipc";
