@@ -32,7 +32,14 @@ and gets tagged on the next release. Cross-ref:
 
 ## [Unreleased]
 
-Work-in-progress since v0.0.2. Tagged `## v0.0.3 — YYYY-MM-DD
+Empty. Work-in-progress for the next release (v0.0.4) lives here.
+
+## v0.0.3 — 2026-07-13
+
+Work-in-progress since v0.0.2. Captures the in-repo
+`fame0528`/`savant-protocol` cleanup performed on 2026-07-12
+and the subsequent quality fixes (FID-006 v3, FID-007, FID-008,
+FID-009) on 2026-07-13.
 
 ### Fixed (FID-009 — Manifest page quality fix, 2026-07-13)
 
@@ -244,11 +251,7 @@ Work-in-progress since v0.0.2. Tagged `## v0.0.3 — YYYY-MM-DD
   accent shadow), thicker progress bar (h-1 → h-1.5), gradient
   background, accent bar on left edge, optional `icon` + `sublabel`
   props, smoother transitions (300ms on hover, 700ms on progress bar).
-  Backwards-compatible: all existing usages work without changes.` at the
-next release cut per release-only-versioning discipline. Captures the
-in-repo `fame0528`/`savant-protocol` cleanup performed on 2026-07-12
-and the subsequent quality fixes (FID-006 v3, FID-007, FID-008,
-FID-009) on 2026-07-13.
+  Backwards-compatible: all existing usages work without changes.
 
 ### Added
 

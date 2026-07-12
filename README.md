@@ -1,7 +1,7 @@
 <!-- markdownlint-disable MD033 -->
 <div align="center">
 
-# Savant v0.0.2
+# Savant v0.0.3
 
 **The proactive AI agent desktop shell — built with Tauri 2 + React 19 + HeroUI v3.**
 
@@ -136,7 +136,7 @@ v0.0.1 → v0.0.2 → ... → v0.0.10 → v0.1.0 → v0.1.1 → ... → v0.1.10 
 
 Count the patch digit 10 times before bumping the minor digit.
 
-The current version is `v0.0.2` and lives in four places that must always
+The current version is `v0.0.3` and lives in four places that must always
 match the canonical `package.json`: the `VERSION` file,
 `protocol.config.yaml` `project.version`, the most recent RELEASED entry
 in `CHANGELOG.md`, and the `README.md` headline. **Versions rock only at
@@ -156,8 +156,8 @@ See `coding-standards/release-workflow.md` for the full rule. Cross-ref:
 | Version | Phase | Shipped                                                                                                            |
 | :------ | :---- | :----------------------------------------------------------------------------------------------------------------- |
 | v0.0.1  | 1     | Tauri 2 shell + master-key vault + OpenRouter smoke-test                                                           |
-| v0.0.2  | 1     | **Now.** Auto-derived session key (FID-0003) + two-tier credential architecture + vitest/Playwright test framework |
-| v0.0.3  | 1     | SettingsKeys.tsx + SettingsModel.tsx split (FID-0004 follow-on) + error UX polish + additional smoke-tests         |
+| v0.0.2  | 1     | Auto-derived session key (FID-0003) + two-tier credential architecture + vitest/Playwright test framework |
+| v0.0.3  | 1     | **Now.** Soul Builder (FID-006 v3) + LLM streaming (FID-010) + swarm diff (FID-013) + Perfection Loop (FID-009) + env key security + dev server fixes |
 | v0.0.10 | 1     | Phase 1 stabilization (before minor bump)                                                                          |
 | v0.1.0  | 2     | Trigger bus + hybrid tick + SQLite WAL durable state + dual-loop init                                              |
 | v0.1.10 | 2     | Phase 2 stabilization (before minor bump)                                                                          |
