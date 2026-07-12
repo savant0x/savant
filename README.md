@@ -177,4 +177,11 @@ Each phase lives as a FID under `dev/fids/` as it ships.
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE).
+Apache 2.0 — see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
+
+Apache 2.0 grants an explicit patent license from contributors to
+users, with a retaliation clause (if you sue the project for
+patent infringement, your license terminates). Trademarks are
+NOT granted — the "Savant" name is reserved for the official
+project per §6 of the license. See the [LICENSE](LICENSE) for
+the full text and the [NOTICE](NOTICE) for the attribution chain.

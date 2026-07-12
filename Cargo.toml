@@ -5,7 +5,7 @@ members = ["src-tauri"]
 [workspace.package]
 version = "0.0.3"
 edition = "2021"
-license = "MIT"
+license = "Apache-2.0"
 authors = ["Spencer — Vera (agent, codebuff/minimax-m3)"]
 rust-version = "1.86"
 description = "Savant AI desktop shell (Renderer-first rebuild, Rust core pending)"

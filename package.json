@@ -1,6 +1,7 @@
 {
   "name": "savant",
   "description": "Savant AI desktop shell (Renderer-first rebuild, Rust core pending)",
+  "license": "Apache-2.0",
   "private": true,
   "version": "0.0.3",
   "scripts": {

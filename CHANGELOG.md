@@ -32,7 +32,15 @@ and gets tagged on the next release. Cross-ref:
 
 ## [Unreleased]
 
-Empty. Work-in-progress for the next release (v0.0.4) lives here.
+### Changed
+
+- **License: MIT → Apache 2.0** (forward-effective from v0.0.4 release).
+  Existing v0.0.3 and earlier releases remain under their original MIT
+  license. Adds explicit patent grant + retaliation clause (per
+  `workspace-savant/SOUL.md` AAA substrate's "Zero-Trust" +
+  "Sovereign-Autonomy" laws). Aligns with Tauri 2's dual-license
+  (MIT/Apache-2.0). `NOTICE` file added with attribution chain +
+  2026-07-13 boilerplate separation note.
 
 ## v0.0.3 — 2026-07-13
 
@@ -106,7 +114,7 @@ leak in Tauri bundle), dev server error fixes (favicon conflict +
   `localStorage["savant.bulk.baseline"]`. Returns `[]` on a fresh
   install (no baseline yet) or on missing/corrupt LS entry.
 - **`bulk_manifest` baseline persistence** [`src/lib/mock-ipc.ts:case
-  "bulk_manifest"`]: on successful deploy, writes the payload to
+"bulk_manifest"`]: on successful deploy, writes the payload to
   `LS_SWARM_BASELINE` so the next `get_swarm_baseline` returns it.
   Documented as non-transactional (quota/private-mode failure leaves
   baseline stale; low risk in practice).
@@ -134,9 +142,9 @@ leak in Tauri bundle), dev server error fixes (favicon conflict +
   `regenCount=0` and gets no suffix.
 - **Race condition closed** [`src/app/manifest/page.tsx:submitDisabled
   - Regenerate button`]: both the MANIFEST SOUL + Regenerate buttons
-  are gated on`regenPending`. The Regenerate callback's guard is
-  also extended:`if (!builtSoul || submitting || regenPending)`.
-  Closes the double-click race during the regenPending window.
+are gated on`regenPending`. The Regenerate callback's guard is
+also extended:`if (!builtSoul || submitting || regenPending)`.
+    Closes the double-click race during the regenPending window.
 - **`regenPending` useEffect with ref** [`src/app/manifest/page.tsx`]:
   the effect deps are INTENTIONALLY only `[regenPending, submitting]`
   — `onManifestSubmit` is captured via a ref so the effect doesn't
@@ -278,13 +286,13 @@ leak in Tauri bundle), dev server error fixes (favicon conflict +
     if-present; returns `Ok(0)` when absent).
   - `LEARNINGS.jsonl` — parser-managed at runtime per
     [`crates/agent/src/learning/parser.rs:26, 69-77`] (`OpenOptions
-    ::new().create(true).append(true)`).
-  Cross-ref: [`dev/fids/FID-2026-07-12-004r2-workspace-savant.md`].  Original FID-004 (r0, proposed invented layout: `README.md`,
-  `manifest.toml`, `soul/savant.soul.yaml`, `evolution.log`) was
-  audit-rejected on 2026-07-13 for producing claims not present in the
-  savant-orig filesystem and is archived at
-  [`dev/fids/archive/FID-2026-07-12-004-workspace-savant-system.md`]
-  with the full divergent-table annotation.
+::new().create(true).append(true)`).
+    Cross-ref: [`dev/fids/FID-2026-07-12-004r2-workspace-savant.md`]. Original FID-004 (r0, proposed invented layout: `README.md`,
+    `manifest.toml`, `soul/savant.soul.yaml`, `evolution.log`) was
+    audit-rejected on 2026-07-13 for producing claims not present in the
+    savant-orig filesystem and is archived at
+    [`dev/fids/archive/FID-2026-07-12-004-workspace-savant-system.md`]
+    with the full divergent-table annotation.
 
 - **Soul-manifest feature + workspace-savant scaffold (FID-006 v2):**
   source-faithful rebuild of the savant-orig persona system per
@@ -302,8 +310,8 @@ leak in Tauri bundle), dev server error fixes (favicon conflict +
   1 EDIT build-config + 1 EDIT chat + 1 REWRITE manifest):**
   - `workspace-savant/SOUL.md` (NEW) — literal `registry.rs:320-326`
     default (`# Soul Configuration\n\n**Name:** Savant\n\n## Terminal
-    Mantra\n\nYou are a Savant autonomous agent. Operate with precision,
-    security, and autonomy.`).
+Mantra\n\nYou are a Savant autonomous agent. Operate with precision,
+security, and autonomy.`).
   - `workspace-savant/AGENTS.md` (NEW) — literal `registry.rs:327-378`
     default (full operating instructions + private diary system spec).
   - `workspace-savant/LEARNINGS.md` (NEW) — literal `registry.rs:379-386`
@@ -334,7 +342,7 @@ leak in Tauri bundle), dev server error fixes (favicon conflict +
   - **NOT pre-scaffolded** (per savant-orig: `USER.md`/`IDENTITY.md`/
     `LEARNINGS.jsonl` are not auto-written blank; `LEARNINGS.md`/
     `LEARNINGS.jsonl` are runtime writes per `learning/parser.rs:40-42,
-    70-73`).
+70-73`).
   - **AUDIT (all 4 gates PASS):** `npx tsc --noEmit` exit 0 (no
     errors, TS2664 `?raw` augmentation gone); `npm run build` success
     (Next.js 15.5.19, 16/16 static pages generated, 2/2 exported, route
@@ -354,9 +362,9 @@ leak in Tauri bundle), dev server error fixes (favicon conflict +
     (global `?raw` ambient), `next.config.mjs` webpack `asset/source`
     rule, `workspace-savant/{SOUL,AGENTS,LEARNINGS}.md` + `EVOLUTION.jsonl`
     - `skills/`, and `src/app/chat/page.tsx`'s `import { SOUL_PROMPT }
-    from "@/lib/soul"` (replacing the const-string stop-gap). Only the
-    `/manifest` viewer is replaced. See
-    [`dev/fids/FID-2026-07-13-006-v3-soul-builder.md`].
+from "@/lib/soul"` (replacing the const-string stop-gap). Only the
+      `/manifest` viewer is replaced. See
+      [`dev/fids/FID-2026-07-13-006-v3-soul-builder.md`].
 
 - **Soul Builder feature (FID-006 v3):** interactive authoring flow
   mirroring savant-orig's `ControlFrame::SoulManifest` +
@@ -372,7 +380,7 @@ leak in Tauri bundle), dev server error fixes (favicon conflict +
     `BulkManifestPayload`, `BulkManifestResult`. All names are exact
     pasteback mirrors — no UX rename.
   - `src/lib/manifest-mock.ts` (NEW) — `generate_template_soul(prompt,
-    name, birthDate, _tier?)` pure function mirror of
+name, birthDate, _tier?)` pure function mirror of
     `handlers/mod.rs:2031`; Phase 1 produces a faithful structural
     subset (header + sections 1-3: Systemic Core & Origin,
     Psychological Matrix AIEOS, Architectural Lineage) + a marker for
@@ -409,7 +417,7 @@ leak in Tauri bundle), dev server error fixes (favicon conflict +
     `SOUL_PROMPT` continues to read the build-time canonical persona.
   - **AUDIT (gated on Spencer ratify):** tsc + build (output:export)
     - prettier + grep gates (FID-151 still 2 consumers +
-    `invoke("manifest_soul"` + `invoke("bulk_manifest"` callers)
+      `invoke("manifest_soul"` + `invoke("bulk_manifest"` callers)
     - `code-reviewer-minimax-m3` APPROVE. See FID body §Verification
     - §Perfection Loop for gate definitions.
   - Cross-ref: [`dev/fids/FID-2026-07-13-006-v3-soul-builder.md`].
@@ -425,10 +433,10 @@ leak in Tauri bundle), dev server error fixes (favicon conflict +
   `useEffect` hydration (`status` defaults to `"template"`,
   `metrics` defaults to `{ lines: 0, sections: 0, depth_score: 0.5 }`)
   - add defensive optional chaining (`builtSoul.metrics?.lines ?? 0`)
-  on all 3 AAA_RATING reads (className, title, percentage). Affects 1
-  file: [`src/app/manifest/page.tsx`]. No data loss — the user's
-  pre-reopen soul body is preserved; only the missing fields are
-  filled with the legacy template defaults.
+    on all 3 AAA_RATING reads (className, title, percentage). Affects 1
+    file: [`src/app/manifest/page.tsx`]. No data loss — the user's
+    pre-reopen soul body is preserved; only the missing fields are
+    filled with the legacy template defaults.
 - **Manifest page Copy button: silent failure in non-secure contexts.** The
   previous implementation used only `navigator.clipboard.writeText()`,
   which fails silently in the Tauri webview (no clipboard plugin
@@ -580,14 +588,14 @@ leak in Tauri bundle), dev server error fixes (favicon conflict +
   no-repeat lastPromptPick) + manifest-mock (computeSectionMetrics
   edge cases + calculateSemanticDepth variance-based 0.5-lock test
   - generateTemplateSoul 18-section shape + parseSSEStream TCP
-  fragmentation + [DONE] sentinel + malformed chunks + abort) +
-  swarm-diff (computeSwarmHashSync stability + previewSwarmDiff
-  4-bucket classification) + soul-body-viewer (h2/h3 + **bold** +
-  `code` + lists + tables + blockquotes + hr). FID-014
-  (regenerate button) intentionally has no unit tests — the
-  `regenPending` useEffect + capture-then-reset pattern lives in
-  page.tsx and would require React Testing Library; verified
-  through 5 code-reviewer passes + manual smoke test.
+    fragmentation + [DONE] sentinel + malformed chunks + abort) +
+    swarm-diff (computeSwarmHashSync stability + previewSwarmDiff
+    4-bucket classification) + soul-body-viewer (h2/h3 + **bold** +
+    `code` + lists + tables + blockquotes + hr). FID-014
+    (regenerate button) intentionally has no unit tests — the
+    `regenPending` useEffect + capture-then-reset pattern lives in
+    page.tsx and would require React Testing Library; verified
+    through 5 code-reviewer passes + manual smoke test.
 - **vitest setup file** [vitest.setup.ts]: polyfills
   `globalThis.crypto` from `node:crypto` `webcrypto` if
   `crypto.subtle` is missing (happy-dom's native implementation
@@ -601,7 +609,7 @@ leak in Tauri bundle), dev server error fixes (favicon conflict +
   production Next.js build's JSX transform so `.tsx` source files
   (which don't `import React`) work in the test runner without
   modification. Avoids polluting source files with dead `import
-  React` lines.
+React` lines.
 - **`parseSSEStream` exported for testability** [src/lib/manifest-mock.ts]:
   was a module-private function; now exported so the test file can
   exercise the TCP-fragmentation path. No behavior change for

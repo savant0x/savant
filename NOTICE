@@ -1,0 +1,28 @@
+Savant
+Copyright 2026 Spencer Howell
+
+This product includes software developed by the following projects,
+each under their own license:
+
+Runtime / framework stack:
+
+- Tauri 2 (<https://tauri.app>) — dual-licensed under MIT or Apache-2.0
+- React 19 (<https://react.dev>) — MIT-licensed
+- HeroUI v3 (<https://heroui.com>) — MIT-licensed
+- Next.js 15 (<https://nextjs.org>) — MIT-licensed
+- Rust (<https://www.rust-lang.org>) — dual-licensed under MIT or Apache-2.0
+
+Build and test tooling (bundled with the static export + Tauri app):
+
+- Vite (<https://vitejs.dev>) — MIT-licensed
+- TypeScript (<https://www.typescriptlang.org>) — Apache-2.0-licensed
+- Vitest (<https://vitest.dev>) — MIT-licensed
+- Playwright (<https://playwright.dev>) — Apache-2.0-licensed
+- happy-dom (<https://github.com/capricorn86/happy-dom>) — MIT-licensed
+
+Lineage: This project was bootstrapped from the savant-protocol
+upstream boilerplate (<https://github.com/fame0528/savant-protocol>,
+MIT-licensed at derivation). The boilerplate-to-project separation
+was completed on 2026-07-13 per LESSON-016 (Draft-and-Prove Rule)
+in dev/LEARNINGS.md. The boilerplate's MIT license is
+forward-compatible with the project's current Apache 2.0 license.
