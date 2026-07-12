@@ -185,3 +185,7 @@ patent infringement, your license terminates). Trademarks are
 NOT granted — the "Savant" name is reserved for the official
 project per §6 of the license. See the [LICENSE](LICENSE) for
 the full text and the [NOTICE](NOTICE) for the attribution chain.
+
+**Forward-effectivity:** v0.0.3 and earlier releases remain under
+their original MIT license. The MIT → Apache 2.0 change applies
+forward-effective from the next release (v0.0.4).

@@ -40,7 +40,8 @@ and gets tagged on the next release. Cross-ref:
   `workspace-savant/SOUL.md` AAA substrate's "Zero-Trust" +
   "Sovereign-Autonomy" laws). Aligns with Tauri 2's dual-license
   (MIT/Apache-2.0). `NOTICE` file added with attribution chain +
-  2026-07-13 boilerplate separation note.
+  2026-07-13 boilerplate separation note. ECHO `protocol.config.yaml`
+  `project.license` field added for metadata symmetry.
 
 ## v0.0.3 — 2026-07-13
 
