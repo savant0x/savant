@@ -45,7 +45,9 @@ FID-009) on 2026-07-13.
 generation + SSE streaming (FID-010), 3-way swarm diff preview
 before deploy (FID-013), 43-issue Perfection Loop (logger +
 redact() + 17 tests), env key security fix (dev guard prevents
-leak in Tauri bundle), dev server error fixes.
+leak in Tauri bundle), dev server fixes (favicon conflict +
+/api/env static export), Tauri version aligned to renderer
+(0.2.0 → 0.0.3).
 
 ### Fixed (FID-009 — Manifest page quality fix, 2026-07-13)
 
