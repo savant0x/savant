@@ -32,10 +32,17 @@ import {
 import { useDerivedRotation } from "@/lib/hooks/use-derived-rotation";
 import { provisionSessionKey, type SessionKey } from "@/lib/ipc";
 import { randomHex } from "@/lib/ids";
+import { formatRelativeTime } from "@/lib/format-relative-time";
+import { SOUL_PROMPT } from "@/lib/soul";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const PROVIDER = "openrouter";
 const DEFAULT_MODEL = "meta-llama/llama-3.3-70b-instruct:free";
+
+// Persona — sourced from workspace-savant/SOUL.md at build time via
+// Next.js `?raw` import (FID-006 v2). See @/lib/soul for the
+// source-of-truth; both chat and manifest consume from there
+// (ECHO Law 13 universal logic).
 
 type Role = "user" | "assistant";
 
@@ -45,12 +52,6 @@ type Message = {
   content: string;
   ts: number;
 };
-
-const SAVANT_SOUL =
-  "You are Savant, a proactive AI agent built by Spencer. Be concise, " +
-  "curious, and act rather than explain. Ask only when clarification is " +
-  "essential. Tone is calm, technical, and direct. Avoid fluff, hedging, " +
-  "and marketing language. Prefer code or commands over prose when both work.";
 
 // Provisioning state for the blocking <dialog>.
 type ProvisioningState = {
@@ -166,7 +167,7 @@ export default function ChatPage() {
         body: JSON.stringify({
           model,
           messages: [
-            { role: "system", content: SAVANT_SOUL },
+            { role: "system", content: SOUL_PROMPT },
             ...messages.map((m) => ({ role: m.role, content: m.content })),
             { role: "user", content: text },
           ],
@@ -298,9 +299,17 @@ export default function ChatPage() {
                       : "mr-auto max-w-[80%] rounded-md border border-accent/40 bg-accent/5 px-4 py-3"
                   }
                 >
-                  <p className="mb-1.5 font-mono text-[9px] font-semibold uppercase tracking-[0.25em] text-muted">
-                    {m.role === "user" ? "You" : "Savant"}
-                  </p>
+                  <div className="mb-1.5 flex items-center justify-between gap-2">
+                    <span className="font-mono text-[9px] font-semibold uppercase tracking-[0.25em] text-muted">
+                      {m.role === "user" ? "You" : "Savant"}
+                    </span>
+                    <span
+                      className="font-mono text-[9px] uppercase tracking-[0.25em] text-muted"
+                      title={new Date(m.ts).toISOString()}
+                    >
+                      {formatRelativeTime(m.ts)}
+                    </span>
+                  </div>
                   <p className="whitespace-pre-wrap text-sm text-foreground">
                     {m.content}
                   </p>
@@ -336,7 +345,7 @@ export default function ChatPage() {
             placeholder="Ask Savant… (Enter to send, Shift+Enter for newline)"
             disabled={sending}
             rows={2}
-            className="flex-1 resize-none rounded-md border border-default/40 bg-surface/30 px-3 py-2 font-mono text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none disabled:opacity-50"
+            className="flex-1 resize-none rounded-md border border-[color:var(--input-border-color)] bg-surface/30 px-3 py-2 font-mono text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none disabled:opacity-50"
           />
           <button
             type="button"

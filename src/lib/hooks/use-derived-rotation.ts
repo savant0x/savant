@@ -28,6 +28,7 @@ import {
   clearSessionKey,
   type SessionKey,
 } from "@/lib/ipc";
+import { logger } from "@/lib/logger";
 
 const PROVIDER = "openrouter";
 const ROTATION_INTERVAL_MS = 60_000;
@@ -67,18 +68,22 @@ export function useDerivedRotation(): void {
           hash: parsed.hash,
         });
         window.localStorage.setItem(LS_DERIVED, JSON.stringify(fresh));
-        // eslint-disable-next-line no-console
-        console.info("[savant] session key rotated (24h cron)");
+        // ECHO Law 12 — the `redact()` helper strips hash + key
+        // fields from the context before logging, so this line is
+        // safe to leave in production builds.
+        logger.info("session key rotated (24h cron)", {
+          old_hash_suffix: parsed.hash.slice(-4),
+          new_agent_suffix: freshAgent.slice(-4),
+        });
       } catch (e) {
-        // eslint-disable-next-line no-console
-        console.warn(
-          "[savant] rotation failed",
+        logger.warn(
+          "rotation failed",
           {
             code: "rotation_error",
             old_hash_suffix: parsed.hash.slice(-4),
             new_agent_suffix: freshAgent.slice(-4),
           },
-          e instanceof Error ? e.message : String(e),
+          e,
         );
         // Leave old LS_DERIVED in place; chat still works with
         // existing key; user can retry via the Rotate button.

@@ -1,4 +1,4 @@
-//! Savant Core — Phase 1 daemon.
+//! Savant — Phase 1 daemon.
 //!
 //! Tauri 2 surface that exposes three IPC commands:
 //! - `setup_master_key(provider, api_key)`  — persist a provider profile to vault.
@@ -57,7 +57,7 @@ pub fn run() {
         ])
         .setup(|app| {
             tracing::info!(
-                "Savant Core Phase 1 starting; vault dir = {:?}",
+                "Savant Phase 1 starting; vault dir = {:?}",
                 master_key::vault_file_path()
             );
             let _ = app.handle();

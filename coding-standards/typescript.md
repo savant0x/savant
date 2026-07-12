@@ -80,6 +80,6 @@ These override the defaults in `protocol.config.yaml` when TypeScript is the con
 
 | Setting | Default | TS Override | Reason |
 |---------|---------|-------------|--------|
-| `max_file_lines` | 300 | 400 | React components and service files tend to be longer |
+| `max_file_lines` | 300 | 1000 | Page-level components can be utility-dense (form state + multiple sections + IPC + persistence); 1,000 is the ceiling per the "build utility first" ECHO philosophy. Ratified 2026-07-13. |
 | `max_function_lines` | 50 | 60 | Component render logic can be slightly longer |
 | `max_line_length` | 100 | 100 | — |

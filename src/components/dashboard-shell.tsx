@@ -24,6 +24,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Separator } from "@heroui/react";
 import { listProfiles, type ProfileSummary } from "@/lib/ipc";
+import { logger } from "@/lib/logger";
 
 type Theme = "dark" | "light";
 
@@ -101,15 +102,34 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     setTheme(current);
   }, []);
 
+  // ECHO Law 14 — surface the error to the user via UI state (not a
+  // silent swallow). The Settings page also reads `vault_list_profiles`
+  // and shows its own error path; this DashboardShell-level error is
+  // for the right-rail Inspector's vault summary. If `profiles` fails
+  // to load, we render an empty list + a `vaultError` indicator in
+  // the Inspector (handled in the JSX below).
+  const [vaultError, setVaultError] = useState<string | null>(null);
   useEffect(() => {
+    let cancelled = false;
     void (async () => {
       try {
         const p = await listProfiles();
-        setProfiles(p);
+        if (!cancelled) {
+          setProfiles(p);
+          setVaultError(null);
+        }
       } catch (err) {
-        console.error("[DashboardShell] listProfiles failed:", err);
+        if (!cancelled) {
+          const msg = err instanceof Error ? err.message : String(err);
+          logger.error("listProfiles failed", { scope: "DashboardShell" }, err);
+          setProfiles([]);
+          setVaultError(msg);
+        }
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const toggleTheme = (): void => {
@@ -149,8 +169,22 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           <Link
             href="/"
             aria-label="Savant home"
-            className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg"
+            className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg"
           >
+            {/* ECHO Law 13 (utility-first): we intentionally use the
+                native <img> instead of `next/image` here. Reasons:
+                1. `output: "export"` in next.config.mjs requires
+                   `images: { unoptimized: true }` for `next/image`,
+                   which defeats the optimization benefit.
+                2. The onError handler hides the img on 404 — the
+                   next/image component does not support an `onError`
+                   prop the same way (it uses a fallback image
+                   prop instead, which we don't want for a logo
+                   that may simply be missing in dev).
+                3. The asset is a local static file under /public
+                   (no remote domain configuration needed).
+                The eslint-disable is the documented escape hatch
+                for this specific use case per the Next.js docs. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/img/logo.png"
@@ -320,7 +354,15 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           <h3 className="mb-3 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
             Vault
           </h3>
-          {profiles.length === 0 ? (
+          {vaultError ? (
+            <p
+              className="text-sm text-danger"
+              title={vaultError}
+              data-testid="vault-error"
+            >
+              Failed to load vault: {vaultError.slice(0, 80)}
+            </p>
+          ) : profiles.length === 0 ? (
             <p className="text-sm text-muted">No profiles configured.</p>
           ) : (
             <ul className="flex flex-col gap-2">

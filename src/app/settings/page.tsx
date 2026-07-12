@@ -11,7 +11,7 @@
 // feedback; no silent fallback to bare master).
 //
 // Override precedence (matches Rust side):
-//   1. OPENROUTER_API_KEY env var, if set — deferred to Phase 5
+//   1. OPENROUTER_MASTER_KEY env var, if set (FID-008)
 //   2. The vault entry saved via saveMasterKey("openrouter", key)
 //   3. The derived subkey in LS_DERIVED for browser-direct fetches
 //
@@ -29,6 +29,9 @@ import {
   saveMasterKey,
   provisionSessionKey,
   clearSessionKey,
+  getMasterKeyInfo,
+  removeMasterKey,
+  type MasterKeyInfo,
   type ProfileSummary,
   type SessionKey,
 } from "@/lib/ipc";
@@ -40,6 +43,8 @@ import {
   parseDerivedSession,
 } from "@/lib/hooks/use-loaded-config";
 import { useDerivedRotation } from "@/lib/hooks/use-derived-rotation";
+import { formatRelativeTime } from "@/lib/format-relative-time";
+import { LS_MASTER } from "@/lib/mock-ipc";
 import { randomHex } from "@/lib/ids";
 
 const PROVIDER = "openrouter";
@@ -118,6 +123,16 @@ export default function SettingsPage() {
   const [profiles, setProfiles] = useState<ProfileSummary[]>([]);
   const [busy, setBusy] = useState(false);
 
+  // FID-007 — Master Key saved-state (masked chip + Edit/Remove) +
+  // edit mode toggle. `masterInfo` is the redacted summary from
+  // `getMasterKeyInfo`; it carries `last4` + `savedAt` so the UI can
+  // show a masked `sk-or-v1-••••••••••••<last4>` chip WITHOUT ever
+  // holding the raw key in React state (Law 12). `editingKey` flips
+  // to true when the user clicks Edit — the input is re-enabled and
+  // the user can paste a replacement key.
+  const [masterInfo, setMasterInfo] = useState<MasterKeyInfo | null>(null);
+  const [editingKey, setEditingKey] = useState(false);
+
   // Derived session key state
   const [derived, setDerived] = useState<SessionKey | null>(null);
 
@@ -190,6 +205,54 @@ export default function SettingsPage() {
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
+
+  // FID-007 — Hydrate the master-key saved-state on mount + on
+  // cross-tab storage events. The mock IPC persists the master
+  // key to `localStorage["savant.master.openrouter"]` (see
+  // `mock-ipc.ts:LS_MASTER`); a tab A save/remove fires the
+  // `storage` event in tab B, which re-hydrates `masterInfo` so the
+  // masked chip stays in sync across tabs.
+  const hydrateMasterInfo = useCallback(async (): Promise<void> => {
+    try {
+      const info = await getMasterKeyInfo(PROVIDER);
+      setMasterInfo(info);
+    } catch {
+      // FID-008 — `source: "none"` is required by the `MasterKeyInfo`
+      // type. Use the explicit union member instead of a cast.
+      setMasterInfo({ exists: false, source: "none" });
+    }
+  }, []);
+  useEffect(() => {
+    void hydrateMasterInfo();
+  }, [hydrateMasterInfo]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onStorage = (e: StorageEvent): void => {
+      if (e.key === LS_MASTER) {
+        void hydrateMasterInfo();
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [hydrateMasterInfo]);
+  // FID-008 — Re-hydrate `masterInfo` when the env var fetch
+  // resolves (closes the cold-start race where the first render
+  // shows `source: "none"` because the env var fetch is async).
+  // The mock IPC dispatches `savant:env-master-key-hydrated` from
+  // `hydrateEnvMasterKey()` in `src/lib/mock-ipc.ts` once
+  // `_envMasterKey` is populated.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onEnvHydrated = (): void => {
+      void hydrateMasterInfo();
+    };
+    window.addEventListener("savant:env-master-key-hydrated", onEnvHydrated);
+    return () =>
+      window.removeEventListener(
+        "savant:env-master-key-hydrated",
+        onEnvHydrated,
+      );
+  }, [hydrateMasterInfo]);
 
   const loaded = useLoadedConfig();
   useEffect(() => {
@@ -275,6 +338,52 @@ export default function SettingsPage() {
   };
 
   /**
+   * FID-007 — Remove the saved master key. Wipes both the
+   * localStorage mirror (via the mock IPC `remove_master_key`
+   * command) AND the module-scoped `mockMasters` cache so the next
+   * `manifest_soul` call falls through to the static 18-section
+   * template. The derived subkey in `LS_DERIVED` is intentionally
+   * LEFT IN PLACE — the user can still chat with the existing
+   * subkey until it expires (24h cron) or they hit Disconnect on
+   * the Session Key card. This matches the version-rocking
+   * discipline where disconnect is per-session, not per-master.
+   *
+   * Two-step confirm (window.confirm) since the action is
+   * destructive: a mis-click loses the master key, and the next
+   * `manifest_soul` call silently degrades to the static template.
+   * Reversible by re-paste, so a simple native confirm is the
+   * right weight (no inline two-step pattern needed).
+   */
+  const handleRemoveKey = async (): Promise<void> => {
+    if (busy) return;
+    if (typeof window !== "undefined") {
+      const ok = window.confirm(
+        "Remove the OpenRouter master key? " +
+          "You can re-add it at any time by pasting a new key. " +
+          "The next Manifest Soul call will use the static template until then.",
+      );
+      if (!ok) return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await removeMasterKey(PROVIDER);
+      // FID-008 — `source: "none"` is required by the `MasterKeyInfo`
+      // type (added in FID-008). Env var may still be active; the
+      // env-var hydration effect will re-fetch and switch the UI.
+      setMasterInfo({ exists: false, source: "none" });
+      setEditingKey(false);
+      setApiKey("");
+      setSaved(false);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /**
    * Step 10: rotate. Provisions a fresh subkey (new random agentName)
    * and DELETEs the old one for cleanliness (avoids zombie keys
    * accumulating in the user's OpenRouter dashboard). Equivalent
@@ -345,7 +454,7 @@ export default function SettingsPage() {
             for every agent call. Saved to your device vault — never reaches
             browser localStorage. Override precedence: the{" "}
             <code className="rounded bg-surface px-1.5 py-0.5 font-mono text-[11px] text-accent">
-              OPENROUTER_API_KEY
+              OPENROUTER_MASTER_KEY
             </code>{" "}
             environment variable takes priority when set.
           </p>
@@ -386,35 +495,170 @@ export default function SettingsPage() {
               </div>
             </dl>
           </div>
+          {/* FID-008 — Env-var-shadows-vault banner. Shown when the
+              env var is the active source AND a vault entry is also
+              saved. Tells the user that the vault entry is being
+              shadowed (still saved, but not used for authorization).
+              Uses warning color (not accent) to signal "your saved
+              entry is being overridden", not success. */}
+          {masterInfo?.source === "env" &&
+            profiles.some((p) => p.provider === PROVIDER) && (
+              <div
+                data-testid="env-shadows-vault-banner"
+                className="mb-3 flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.15em] text-warning"
+              >
+                <i
+                  className="fas fa-info-circle mt-0.5 text-[11px]"
+                  aria-hidden
+                />
+                <span className="normal-case tracking-normal text-foreground">
+                  The{" "}
+                  <code className="text-warning">OPENROUTER_MASTER_KEY</code>{" "}
+                  environment variable shadows your saved vault entry. Remove
+                  the env var or your saved vault entry to switch sources.
+                </span>
+              </div>
+            )}
           <div className="flex flex-col gap-2">
             <label
               htmlFor="master-key"
-              className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-muted"
+              className="flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-muted"
             >
-              OpenRouter Master Key
+              <span>OpenRouter Master Key</span>
+              {editingKey && (
+                <span className="font-normal normal-case text-accent">
+                  · editing
+                </span>
+              )}
             </label>
-            <input
-              id="master-key"
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk-or-v1-..."
-              disabled={busy}
-              autoComplete="off"
-              spellCheck={false}
-              className="w-full rounded-md border border-white/20 bg-black/50 px-3 py-2 font-mono text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50"
-            />
+            {masterInfo?.exists && !editingKey ? (
+              /* ── SAVED STATE: masked key chip + source badge + Edit/Remove ── */
+              <div className="flex items-center gap-2">
+                <code
+                  data-testid="master-key-masked"
+                  className="flex-1 truncate rounded-md border border-[color:var(--input-border-color)] bg-black/30 px-3 py-2 font-mono text-sm text-foreground"
+                  title={
+                    masterInfo.source === "env"
+                      ? "Master key from OPENROUTER_MASTER_KEY env var (tier 1, highest priority)"
+                      : "Master key saved — stored in browser localStorage (browser-preview only; the Tauri desktop app uses the OS keychain via tauri-plugin-stronghold)"
+                  }
+                >
+                  sk-or-v1-••••••••••••{masterInfo.last4 ?? "••••"}
+                </code>
+                {/* FID-008 — Source badge: "env" (tier 1) or "vault" (tier 2).
+                    Helps the user see at a glance which tier is active. */}
+                {masterInfo.source === "env" && (
+                  <span
+                    data-testid="master-key-source"
+                    className="rounded border border-accent/40 bg-accent/15 px-2 py-1 font-mono text-[9px] font-semibold uppercase tracking-[0.2em] text-accent"
+                    title="Source: OPENROUTER_MASTER_KEY env var (tier 1)"
+                  >
+                    env
+                  </span>
+                )}
+                {masterInfo.source === "vault" && (
+                  <span
+                    data-testid="master-key-source"
+                    className="rounded border border-default/60 bg-surface/40 px-2 py-1 font-mono text-[9px] font-semibold uppercase tracking-[0.2em] text-muted"
+                    title="Source: vault entry (tier 2)"
+                  >
+                    vault
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingKey(true);
+                    setApiKey("");
+                    setError(null);
+                  }}
+                  aria-label="Edit master key"
+                  disabled={busy}
+                  className="flex items-center gap-1.5 rounded-md border border-default/60 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.2em] text-muted transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <i className="fas fa-pen" aria-hidden />
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleRemoveKey()}
+                  aria-label="Remove master key"
+                  disabled={busy}
+                  className="flex items-center gap-1.5 rounded-md border border-default/60 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.2em] text-muted transition-colors hover:border-danger hover:text-danger disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <i className="fas fa-trash" aria-hidden />
+                  Remove
+                </button>
+              </div>
+            ) : (
+              /* ── INPUT STATE: empty (first save) or editing (replace) ── */
+              <>
+                <input
+                  id="master-key"
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder={editingKey ? "Enter new key" : "sk-or-v1-..."}
+                  disabled={busy}
+                  autoComplete="off"
+                  spellCheck={false}
+                  className="w-full rounded-md border border-[color:var(--input-border-color)] bg-black/50 px-3 py-2 font-mono text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50"
+                />
+                {editingKey && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingKey(false);
+                      setApiKey("");
+                      setError(null);
+                    }}
+                    className="self-start font-mono text-[10px] uppercase tracking-[0.2em] text-muted transition-colors hover:text-foreground"
+                  >
+                    Cancel edit
+                  </button>
+                )}
+              </>
+            )}
           </div>
           <div className="mt-5 flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => void handleSaveKey()}
-              disabled={!apiKey.trim() || busy}
-              className="flex items-center gap-2 rounded-md border border-accent bg-accent/15 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.2em] text-accent transition-colors hover:bg-accent/25 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <i className="fas fa-key" aria-hidden />
-              Save Master Key
-            </button>
+            {masterInfo?.exists && !editingKey ? (
+              /* ── SAVED STATE: "Saved · last updated X ago" chip ── */
+              <span
+                aria-label="saved and provisioned"
+                className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-success"
+              >
+                <span
+                  className="h-1.5 w-1.5 rounded-full bg-success shadow-[0_0_4px_var(--success)]"
+                  aria-hidden
+                />
+                Saved
+                {masterInfo.savedAt !== null &&
+                  masterInfo.savedAt !== undefined && (
+                    <>
+                      {" "}
+                      · last updated{" "}
+                      <span
+                        title={new Date(
+                          masterInfo.savedAt * 1000,
+                        ).toISOString()}
+                      >
+                        {formatRelativeTime(masterInfo.savedAt * 1000)}
+                      </span>
+                    </>
+                  )}
+              </span>
+            ) : (
+              /* ── INPUT/EDIT STATE: primary action button ── */
+              <button
+                type="button"
+                onClick={() => void handleSaveKey()}
+                disabled={!apiKey.trim() || busy}
+                className="flex items-center gap-2 rounded-md border border-accent bg-accent/15 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.2em] text-accent transition-colors hover:bg-accent/25 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <i className="fas fa-key" aria-hidden />
+                {editingKey ? "Update Master Key" : "Save Master Key"}
+              </button>
+            )}
             {saved && (
               <span
                 aria-label="saved and provisioned"
@@ -475,17 +719,18 @@ export default function SettingsPage() {
                   </p>
                   <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.25em] text-muted">
                     minted{" "}
-                    {new Date(derived.created_at).toLocaleString(undefined, {
-                      month: "short",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    <span title={new Date(derived.created_at).toISOString()}>
+                      {formatRelativeTime(new Date(derived.created_at))}
+                    </span>
                     {derived.expires_at && (
                       <>
                         {" "}
                         · expires{" "}
-                        {new Date(derived.expires_at).toLocaleString()}
+                        <span
+                          title={new Date(derived.expires_at).toISOString()}
+                        >
+                          {formatRelativeTime(new Date(derived.expires_at))}
+                        </span>
                       </>
                     )}
                     {derived.limit !== null && <> · cap ${derived.limit}</>}
@@ -551,7 +796,7 @@ export default function SettingsPage() {
                 id="provider"
                 value={provider}
                 onChange={(e) => setProvider(e.target.value)}
-                className="w-full appearance-none rounded-md border border-white/20 bg-black/50 px-3 py-2 pr-8 font-mono text-sm text-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                className="w-full appearance-none rounded-md border border-[color:var(--input-border-color)] bg-black/50 px-3 py-2 pr-8 font-mono text-sm text-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
               >
                 {PROVIDERS.map((p) => (
                   <option
@@ -587,7 +832,7 @@ export default function SettingsPage() {
                 id="model"
                 value={modelId}
                 onChange={(e) => setModelId(e.target.value)}
-                className="w-full appearance-none rounded-md border border-white/20 bg-black/50 px-3 py-2 pr-8 font-mono text-sm text-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                className="w-full appearance-none rounded-md border border-[color:var(--input-border-color)] bg-black/50 px-3 py-2 pr-8 font-mono text-sm text-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
               >
                 {models.length === 0 && !modelsLoading && (
                   <option
@@ -733,8 +978,11 @@ export default function SettingsPage() {
                       {p.base_url ? ` · ${p.base_url}` : ""}
                     </p>
                   </div>
-                  <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
-                    {new Date(p.updated_at * 1000).toLocaleDateString()}
+                  <span
+                    className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted"
+                    title={new Date(p.updated_at * 1000).toISOString()}
+                  >
+                    {formatRelativeTime(p.updated_at * 1000)}
                   </span>
                 </li>
               ))}

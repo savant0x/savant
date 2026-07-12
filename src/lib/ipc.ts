@@ -12,6 +12,15 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { setupMockIPC } from "./mock-ipc";
+import type { ManifestStreamEvent } from "./manifest-mock";
+import type {
+  AgentManifestPlan,
+  BulkManifestPayload,
+  BulkManifestResult,
+  ManifestResult,
+  SoulManifestPayload,
+} from "@/types/control-frames";
+import { logger } from "@/lib/logger";
 
 setupMockIPC();
 
@@ -40,6 +49,45 @@ export async function inferOpenrouter(prompt: string): Promise<string> {
 /** List all profiles currently in the vault (api keys not returned). */
 export async function listProfiles(): Promise<ProfileSummary[]> {
   return invoke("vault_list_profiles");
+}
+
+/** Redacted master-key summary. NEVER includes the actual key bytes. */
+export type MasterKeyInfo = {
+  exists: boolean;
+  last4?: string;
+  savedAt?: number | null;
+  /**
+   * FID-008 — which tier is the active source:
+   * - `"env"`   = `process.env.OPENROUTER_MASTER_KEY` (tier 1)
+   * - `"vault"` = `setup_master_key` save (tier 2)
+   * - `"none"`  = no key available; manifest falls back to template
+   */
+  source: "env" | "vault" | "none";
+};
+
+/**
+ * FID-007 — Query the saved master key for a provider. Returns
+ * redacted metadata only (existence + last-4 + savedAt timestamp) so
+ * the Settings page can render a masked key chip without ever
+ * holding the raw key bytes in React state. Returns `{ exists: false }`
+ * when no key is saved for the provider.
+ */
+export async function getMasterKeyInfo(
+  provider: string,
+): Promise<MasterKeyInfo> {
+  return invoke<MasterKeyInfo>("get_master_key_info", { provider });
+}
+
+/**
+ * FID-007 — Remove a saved master key. Wipes the localStorage mirror
+ * + the mock-IPC module cache so the next `manifest_soul` call falls
+ * through to the static 18-section template. The derived subkey
+ * (LS_DERIVED) is intentionally left in place — the user can still
+ * chat with the existing subkey until it expires / they hit
+ * Disconnect on the Session Key card.
+ */
+export async function removeMasterKey(provider: string): Promise<void> {
+  return invoke("remove_master_key", { provider });
 }
 
 export type AppConfig = {
@@ -177,16 +225,18 @@ export async function provisionSessionKey(
   try {
     return normalizeProvisionResponse(wire);
   } catch (e) {
-    // eslint-disable-next-line no-console
-    console.warn(
-      "[savant] provision normalize failed",
-      JSON.stringify({
+    // ECHO Law 12 — log structured context (no secret material;
+    // `agent_name` is the user-supplied name, not the key bytes)
+    // and re-throw so the caller propagates the error to the UI.
+    logger.warn(
+      "provision normalize failed",
+      {
         input_profile: input.profile,
         input_agent: input.agentName,
         code: "openrouter_provision_status_parser",
         agent_name: input.agentName.slice(-4),
-      }),
-      e instanceof Error ? e.message : String(e),
+      },
+      e,
     );
     throw e;
   }
@@ -201,4 +251,176 @@ export async function clearSessionKey(
   input: ClearKeyInput,
 ): Promise<{ ok: boolean }> {
   return invoke<{ ok: boolean }>("clear_session_key", input);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// FID-006 v3 — Soul builder IPC wrappers (Phase 1 mock; real Tauri
+// in Phase 2). The mock intercepts these in `mock-ipc.ts`.
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Build a soul from a manifest request. Mirrors
+ * `ControlFrame::SoulManifest` at `crates/core/src/types/mod.rs:75`
+ * (prompt, name?, bootstrap_tier?, model?) and the gateway handler at
+ * `crates/gateway/src/handlers/mod.rs:1718-1982`
+ * (`execute_manifestation`).
+ *
+ * Returns a `ManifestResult` with the full SOUL.md body, metrics
+ * (lines, sections, depth_score), and a status discriminator
+ * (`"complete"` for LLM success, `"template"` for the no-key
+ * fallback, `"error"` for failures). Phase 1: real OpenRouter
+ * `POST /v1/chat/completions` call from the browser when a master
+ * key is captured in `mockMasters["openrouter"]`, otherwise static
+ * 18-section template fallback. Phase 2: real Tauri command writes
+ * to `workspace-savant/SOUL.md`.
+ */
+export async function manifestSoul(
+  payload: SoulManifestPayload,
+): Promise<ManifestResult> {
+  return invoke<ManifestResult>(
+    "manifest_soul",
+    payload as unknown as Record<string, unknown>,
+  );
+}
+
+/**
+ * Bulk-manifest N agents (each `AgentManifestPlan` becomes a
+ * `workspace-savant/SOUL.md` + `workspace-savant/IDENTITY.md` pair).
+ * Mirrors `ControlFrame::BulkManifest` at
+ * `crates/core/src/types/mod.rs:84` and the server dispatch at
+ * `crates/gateway/src/handlers/mod.rs:645-665` (SEC #8: 10 agents max).
+ *
+ * Returns `{ status: "SWARM_DEPLOYED", count }` on success or
+ * `{ status: "REJECTED", reason: "SEC_8_LIMIT_EXCEEDED" }` on the
+ * server-side SEC #8 rejection. On success, the mock IPC also
+ * persists the payload as the new swarm baseline (FID-013) so the
+ * next `getSwarmBaseline` returns it.
+ */
+export async function bulkManifest(
+  payload: BulkManifestPayload,
+): Promise<BulkManifestResult> {
+  return invoke<BulkManifestResult>(
+    "bulk_manifest",
+    payload as unknown as Record<string, unknown>,
+  );
+}
+
+/**
+ * FID-013 — Read the current active swarm baseline. Returns the
+ * last successfully-deployed `AgentManifestPlan[]` (mock: from
+ * localStorage; Phase 2: from Rust state). Empty array on a fresh
+ * install (no baseline yet). Used by the /manifest page's
+ * "Deploy Swarm" preview to compute the 3-way diff
+ * (added/modified/removed vs the proposed deployment).
+ */
+export async function getSwarmBaseline(): Promise<AgentManifestPlan[]> {
+  return invoke<AgentManifestPlan[]>("get_swarm_baseline");
+}
+
+// ─────────────────────────────────────────────────────────────────
+// FID-010 — Soul generation streaming (SSE).
+//
+// OpenRouter's `/v1/chat/completions` supports `stream: true` to
+// emit Server-Sent Events. We expose a Channel-shaped IPC contract
+// that mirrors Tauri v2's `Channel<T>` API (verified in
+// dev/fids/FID-2026-07-13-010-streaming-soul-generation.md §Phase 2):
+// the renderer creates a channel, subscribes via `onmessage`, passes
+// the channel to `invoke("manifest_soul_stream", { ...payload, _channel })`,
+// and receives events as the LLM produces tokens.
+//
+// Phase 1 (browser mock): the `_channel` is a plain
+// `ManifestStreamChannel` (duck-typed), passed by reference since
+// mockIPC is an in-process function call. Phase 2 (Tauri) will
+// swap the channel creation for `new Channel<ManifestStreamEvent>()`
+// from `@tauri-apps/api/core` and pass it through the same
+// invoke arg slot — the renderer code is unchanged.
+// ─────────────────────────────────────────────────────────────────
+
+/** Re-export of the stream event shape from `manifest-mock.ts`. */
+export type { ManifestStreamEvent };
+
+/**
+ * Channel-shaped event sink for `manifestSoulStream()`. Mirrors
+ * Tauri v2's `Channel<T>` shape (a class with `send` for the
+ * server-side + `onmessage` for the client-side). We don't
+ * directly extend Tauri's `Channel` class because:
+ * 1. Tauri is not yet wired up (Phase 1 browser mock).
+ * 2. Duck-typing the shape lets us swap implementations without
+ *    breaking the renderer.
+ *
+ * Phase 2 migration: replace `createManifestStreamChannel()` with
+ * `new Channel<ManifestStreamEvent>()` and update the mock to
+ * forward events via `channel.send()`. The `onmessage(handler)`
+ * API stays identical.
+ */
+export interface ManifestStreamChannel {
+  /** Subscribe to events. Returns an unsubscribe function. */
+  onmessage(handler: (event: ManifestStreamEvent) => void): () => void;
+  /** Internal — called by the IPC handler. Not part of the
+   *  public renderer API; exposed for the mock implementation. */
+  send(event: ManifestStreamEvent): void;
+}
+
+/**
+ * Create a stream channel. The returned object is passed to
+ * `manifestSoulStream()` as the `_channel` arg. The handler
+ * receives events as the LLM produces tokens.
+ */
+export function createManifestStreamChannel(): ManifestStreamChannel {
+  const handlers: Array<(e: ManifestStreamEvent) => void> = [];
+  return {
+    onmessage: (handler) => {
+      handlers.push(handler);
+      return () => {
+        const idx = handlers.indexOf(handler);
+        if (idx >= 0) handlers.splice(idx, 1);
+      };
+    },
+    send: (event) => {
+      // Snapshot the handlers list so an unsubscribe inside a
+      // handler doesn't skip the remaining listeners.
+      for (const h of [...handlers]) h(event);
+    },
+  };
+}
+
+/**
+ * Handle returned by `manifestSoulStream()`. The renderer uses
+ * `cancel()` to abort an in-flight stream (e.g. from a Cancel
+ * button) and `done` to await final cleanup.
+ */
+export interface ManifestStreamHandle {
+  /** Fire-and-forget cancel. Tears down the underlying fetch +
+   *  SSE parser. The renderer should immediately reset its UI
+   *  state and ignore any straggler events that arrive after
+   *  cancel (the mock guarantees no further `send()` calls
+   *  after the abort settles, but a few in-flight chunks may
+   *  already be in the channel dispatch queue). */
+  cancel(): void;
+  /** Resolves when the stream ends (complete / error / cancel).
+   *  The renderer can use this to coordinate cleanup (e.g. clear
+   *  the elapsed-time ticker). */
+  done: Promise<void>;
+}
+
+/**
+ * Stream a soul generation via OpenRouter SSE. Yields
+ * `preamble` / `chunk` / `complete` / `error` events through the
+ * channel. Returns a handle with `cancel()` (fire-and-forget
+ * abort) + `done` (resolves when the stream ends).
+ *
+ * The channel is the sole event sink — no streamId is needed
+ * because the renderer's Cancel button calls `handle.cancel()`
+ * directly (closes over the AbortController in the mock IPC
+ * command). Phase 2 Tauri migration is a drop-in replacement of
+ * the channel factory (see `createManifestStreamChannel`).
+ */
+export async function manifestSoulStream(
+  payload: SoulManifestPayload,
+  channel: ManifestStreamChannel,
+): Promise<ManifestStreamHandle> {
+  return invoke<ManifestStreamHandle>("manifest_soul_stream", {
+    ...payload,
+    _channel: channel,
+  } as unknown as Record<string, unknown>);
 }

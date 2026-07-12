@@ -58,6 +58,18 @@ v0.0.1 proof point and the integration test for every subsequent phase.
 > intercepted by `src/lib/mock-ipc.ts` and return synthetic data. In the
 > Tauri desktop (Option B), `window.__TAURI_INTERNALS__` is set, the mock
 > self-disables, and the real Rust daemon handles every call.
+>
+> **Web deployment is not supported.** Savant's renderer is built with
+> `output: "export"` in `next.config.mjs` (required by the Tauri static
+> export at `frontendDist: "../out"` in `tauri.conf.json`). The
+> `/api/env` route is compiled to a static JSON file at build time and
+> cannot read server env vars at runtime in a static export. The two
+> supported paths are the browser preview (Option A, dev server with
+> mocked IPC) and the Tauri desktop (Option B, real Rust IPC). Hosting
+> the static export on a web server is not a supported target — drop
+> `output: "export"` and maintain a separate dynamic build config if
+> you need that. The Tauri app reads the env var server-side via Rust
+> IPC in production, so the env var tier remains functional.
 
 ---
 

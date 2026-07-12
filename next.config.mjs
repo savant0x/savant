@@ -15,6 +15,18 @@ const nextConfig = {
   // corner that shows the route and build status). The Sovereign navbar
   // is the only chrome we want in the renderer.
   devIndicators: false,
+  // FID-006 v2: enable `?raw` imports for `.md` files
+  // (workspace-savant/SOUL.md). The `asset/source` webpack type treats
+  // matched files as raw text strings. Without this rule, Next.js
+  // webpack fails with "Module parse failed: Unexpected character" on
+  // the .md?raw import. See src/lib/soul.ts.
+  webpack: (config) => {
+    config.module.rules.push({
+      test: /\.md$/,
+      type: "asset/source",
+    });
+    return config;
+  },
 };
 
 export default nextConfig;

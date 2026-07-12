@@ -6,8 +6,8 @@
 #   3. commands.test:  your test runner command
 
 project:
-  name: "savant-core"
-  description: "Tauri 2 + React 19 + HeroUI v3 alpha desktop app — proactive AI assistant. Phase 1 in flight."
+  name: "savant"
+  description: "Next.js 15 + React 19 + HeroUI v3 alpha renderer over a Rust (Tauri 2) daemon — proactive AI assistant. Renderer-first rebuild; Rust core not yet built. Phase 1 in flight."
   version: "0.0.2"
 
 protocol:

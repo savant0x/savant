@@ -15,6 +15,19 @@
 import { mockIPC } from "@tauri-apps/api/mocks";
 import type { InvokeArgs } from "@tauri-apps/api/core";
 import type { AppConfig, ProfileSummary } from "./ipc";
+import {
+  generateSoul,
+  generateSoulStream,
+  type ManifestStreamEvent,
+} from "./manifest-mock";
+import type {
+  AgentManifestPlan,
+  BootstrapTier,
+  BulkManifestResult,
+  ManifestResult,
+  SoulManifestPayload,
+} from "@/types/control-frames";
+import { logger } from "@/lib/logger";
 
 // Tauri injects __TAURI_INTERNALS__ on the window object when running inside
 // the webview. The @tauri-apps/api umbrella doesn't export this as a typed
@@ -25,14 +38,139 @@ declare global {
   }
 }
 
+// FID-007 — localStorage keys for browser-preview persistence.
+// `mockMasters` + `mockProfiles` were previously module-scoped and
+// got wiped every time `setupMockIPC()` ran (HMR / route re-mount),
+// which made the Settings page show the Master Key input as blank
+// even after a successful save + the manifest page fall back to the
+// static template. Persisting to `localStorage` matches the existing
+// `LS_DERIVED` pattern (a real OpenRouter subkey is already stored
+// there) and survives HMR + route re-mounts.
+//
+// SECURITY NOTE: in the Tauri desktop runtime these bytes would live
+// in the OS keychain via `tauri-plugin-stronghold`; localStorage is
+// the browser-preview equivalent. The `LS_MASTER` key is intentionally
+// NOT a `LS_*` const from `@/lib/hooks/use-loaded-config` because the
+// master key write path is mock-IPC-internal, not a renderer hook.
+export const LS_MASTER = "savant.master.openrouter";
+// `LS_PROFILES` is intentionally NOT exported (YAGNI — no external
+// consumer; profiles are managed by `listProfiles` / the mock IPC
+// switch). Promote to `export` only when a second consumer emerges.
+const LS_PROFILES = "savant.vault.profiles";
+// FID-013 — Swarm baseline. Persists the last successfully-deployed
+// `AgentManifestPlan[]` so the next `get_swarm_baseline` can compute
+// the diff preview (added/modified/removed vs active). Cleared on
+// HMR (HMR resets the module, which is fine — the manifest page
+// re-reads on mount). Phase 2 will replace with real Rust state.
+const LS_SWARM_BASELINE = "savant.bulk.baseline";
+
 let mockProfiles: ProfileSummary[] = [];
 let mockConfig: AppConfig | null = null;
 
 // Per-profile master key mirror — populated by `setup_master_key` so
-// `provision_session_key` + `clear_session_key` can authorize their
-// real `/v1/keys` HTTP calls. Master bytes never leave this module;
-// chat outbound traffic only sees the derived (subkey) `key` field.
+// `provision_session_key` + `clear_session_key` + `manifest_soul` can
+// authorize their real `/v1/keys` + `/v1/chat/completions` HTTP calls.
+// Persisted to `localStorage` (FID-007) so it survives HMR / route
+// re-mounts. Master bytes never leave this module; chat outbound
+// traffic only sees the derived (subkey) `key` field.
 let mockMasters: Record<string, string> = {};
+
+// FID-008 — env var master key (tier 1, highest priority). Cached on
+// `setupMockIPC()` init from `/api/env`. The env var shadows any
+// vault entry when set. The renderer's `getMasterKeyInfo` reads
+// `source: "env" | "vault" | "none"` to render the right UI.
+// `effectiveMasterKey()` is the single point of override-precedence
+// resolution: env > vault > "" (template fallback).
+let _envMasterKey: string | null = null;
+
+function hydrateEnvMasterKey(): void {
+  if (typeof window === "undefined") return;
+  // Fire-and-forget; the first call to `get_master_key_info` may
+  // race and return `source: "none"`. We dispatch a custom event
+  // when the fetch resolves so the Settings page can re-fetch
+  // `masterInfo` and switch from "none" → "env" without waiting
+  // for the next storage event. This closes the cold-start race
+  // (typically < 100ms on localhost, but non-zero).
+  fetch("/api/env")
+    .then((r) => r.json())
+    .then((data: { openrouterMasterKey?: string | null }) => {
+      _envMasterKey = data.openrouterMasterKey ?? null;
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("savant:env-master-key-hydrated"));
+      }
+    })
+    .catch(() => {
+      /* network error / 404 / server down — leave _envMasterKey null */
+    });
+}
+
+/**
+ * Resolve the effective master key for a provider per the override
+ * precedence: env var (tier 1) > vault entry (tier 2) > "" (no
+ * key; the next `manifest_soul` call falls through to the static
+ * 18-section template). The env var shadows the vault when set,
+ * but the vault entry is still saved (for when the env var is
+ * unset).
+ */
+function effectiveMasterKey(provider: string): string {
+  return _envMasterKey ?? mockMasters[provider] ?? "";
+}
+
+function persistMasters(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(LS_MASTER, JSON.stringify(mockMasters));
+  } catch {
+    /* noop — quota / private-mode fail is non-fatal for the session */
+  }
+}
+
+function hydrateMasters(): void {
+  if (typeof window === "undefined") return;
+  const raw = window.localStorage.getItem(LS_MASTER);
+  if (!raw) return;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const out: Record<string, string> = {};
+      for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+        if (typeof v === "string" && v.length > 0) out[k] = v;
+      }
+      mockMasters = out;
+    }
+  } catch {
+    /* malformed JSON — leave mockMasters empty; the user will re-save */
+  }
+}
+
+function persistProfiles(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(LS_PROFILES, JSON.stringify(mockProfiles));
+  } catch {
+    /* noop */
+  }
+}
+
+function hydrateProfiles(): void {
+  if (typeof window === "undefined") return;
+  const raw = window.localStorage.getItem(LS_PROFILES);
+  if (!raw) return;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (Array.isArray(parsed)) {
+      mockProfiles = parsed.filter(
+        (p): p is ProfileSummary =>
+          p !== null &&
+          typeof p === "object" &&
+          typeof (p as ProfileSummary).name === "string" &&
+          typeof (p as ProfileSummary).provider === "string",
+      );
+    }
+  } catch {
+    /* malformed JSON — leave mockProfiles empty */
+  }
+}
 
 // Full wire-envelope responses keyed by `${profile}:${agentName}` for
 // regression inspection. The renderer never sees these directly — they
@@ -42,6 +180,26 @@ const mockReports: Record<
   { data: Record<string, unknown>; key: string }
 > = {};
 
+// FID-006 v3 (reopened 2026-07-13) — built-soul map. Each entry is
+// the result of a `manifest_soul` IPC dispatch (now returning the
+// full `ManifestResult` with content + metrics + status). Most-recent-
+// first. Persists across mock-IPC re-installs within the same page
+// session; cleared on HMR (HMR resets the module, which is fine —
+// the manifest page reads from localStorage for cross-reload
+// persistence).
+type BuiltSoulEntry = {
+  ts: number;
+  prompt: string;
+  name: string | null;
+  tier: string | null;
+  status: ManifestResult["status"];
+  metrics: ManifestResult["metrics"];
+  content: string;
+  note?: string;
+  error?: string;
+};
+const builtSouls: BuiltSoulEntry[] = [];
+
 const OPENROUTER_PROVISION_URL = "https://openrouter.ai/api/v1/keys";
 const OPENROUTER_DELETE_KEY_URL_FMT = (hash: string): string =>
   `https://openrouter.ai/api/v1/keys/${hash}`;
@@ -50,11 +208,16 @@ export function setupMockIPC(): void {
   if (typeof window === "undefined") return; // server-side, no-op
   if (window.__TAURI_INTERNALS__) return; // real Tauri runtime, no mock needed
 
-  // Reset on each setup so the browser preview is repeatable across HMR reloads
-  mockProfiles = [];
+  // Hydrate BEFORE the reset so the wipe doesn't drop user data.
+  // Then reset module-scoped transient state (sessions, reports,
+  // soul history) but PRESERVE the persisted master + profiles —
+  // those survive HMR by design (FID-007).
+  hydrateMasters();
+  hydrateProfiles();
+  hydrateEnvMasterKey();
   mockConfig = null;
-  mockMasters = {};
   for (const k of Object.keys(mockReports)) delete mockReports[k];
+  for (let i = builtSouls.length - 1; i >= 0; i--) builtSouls.splice(i, 1);
 
   // InvokeArgs is a union (Record<string, unknown> | number[] | ...), so
   // we cast to Record<string, unknown> for ergonomic property access on
@@ -70,8 +233,10 @@ export function setupMockIPC(): void {
         const provider = String(args.provider ?? "openrouter");
         const apiKey = String(args.apiKey ?? "");
         // Capture master per profile so sibling commands can authorize
-        // their real fetch. Module-scoped; master bytes never leave.
+        // their real fetch. Persisted to localStorage (FID-007) so
+        // HMR / route re-mounts don't wipe the saved key.
         mockMasters[provider] = apiKey;
+        persistMasters();
         const profile: ProfileSummary = {
           name: `${provider}-default`,
           provider,
@@ -84,6 +249,54 @@ export function setupMockIPC(): void {
         const idx = mockProfiles.findIndex((p) => p.name === profile.name);
         if (idx >= 0) mockProfiles[idx] = profile;
         else mockProfiles.push(profile);
+        persistProfiles();
+        return null;
+      }
+
+      // FID-007 + FID-008 — Return a redacted summary of the effective
+      // master key (existence + last-4 + savedAt + source). The
+      // `source` discriminator tells the Settings page which tier is
+      // active: `"env"` (tier 1, env var), `"vault"` (tier 2, saved
+      // via `setup_master_key`), or `"none"` (no key). NEVER returns
+      // the actual key bytes (Law 12).
+      case "get_master_key_info": {
+        const provider = String(args.provider ?? "openrouter");
+        // Env var (tier 1) shadows the vault when set.
+        if (_envMasterKey) {
+          return {
+            exists: true,
+            last4: _envMasterKey.slice(-4),
+            savedAt: null,
+            source: "env" as const,
+          };
+        }
+        // Vault entry (tier 2).
+        const master = mockMasters[provider] ?? "";
+        if (!master) return { exists: false, source: "none" as const };
+        return {
+          exists: true,
+          last4: master.slice(-4),
+          savedAt:
+            mockProfiles.find((p) => p.provider === provider)?.updated_at ??
+            null,
+          source: "vault" as const,
+        };
+      }
+
+      // FID-007 — Remove a saved master key. Wipes BOTH the
+      // localStorage mirror AND the module-scoped cache so the next
+      // `manifest_soul` call falls through to the static template
+      // (UNLESS the env var is set, in which case the env var still
+      // authorizes calls — the vault entry was already shadowed).
+      // The derived subkey (LS_DERIVED) is left in place — the user
+      // can still chat with the existing subkey until it expires or
+      // they hit Disconnect on the Session Key card.
+      case "remove_master_key": {
+        const provider = String(args.provider ?? "openrouter");
+        delete mockMasters[provider];
+        persistMasters();
+        mockProfiles = mockProfiles.filter((p) => p.provider !== provider);
+        persistProfiles();
         return null;
       }
 
@@ -95,7 +308,8 @@ export function setupMockIPC(): void {
       case "provision_session_key": {
         const profile = String(args.profile ?? "openrouter");
         const agentName = String(args.agentName ?? "");
-        const master = mockMasters[profile];
+        // FID-008 — env var (tier 1) > vault (tier 2) > "" (no key).
+        const master = effectiveMasterKey(profile);
         if (!master) {
           throw new Error(
             `Mock IPC: no master captured for profile '${profile}'. Call setup_master_key first.`,
@@ -150,7 +364,8 @@ export function setupMockIPC(): void {
       case "clear_session_key": {
         const profile = String(args.profile ?? "openrouter");
         const hash = String(args.hash ?? "");
-        const master = mockMasters[profile];
+        // FID-008 — env var (tier 1) > vault (tier 2) > "" (no key).
+        const master = effectiveMasterKey(profile);
         if (!master || !hash) {
           // Silent { ok: false } on disconnect-without-master so the
           // renderer can keep the UX flat (failure surfaces in
@@ -195,13 +410,241 @@ export function setupMockIPC(): void {
         return mockConfig;
       }
 
+      // FID-006 v3 (reopened 2026-07-13) — Soul builder. Phase 1
+      // mock for the Tauri `manifest_soul` command. Mirrors the
+      // gateway handler at `crates/gateway/src/handlers/mod.rs:1718-1982`
+      // (`execute_manifestation`): makes a real OpenRouter
+      // `POST /v1/chat/completions` call when an OpenRouter master key
+      // is captured in `mockMasters["openrouter"]` (set by
+      // `setup_master_key`); otherwise falls back to the static
+      // 18-section template with `status: "template"`. The result is
+      // a `ManifestResult` shape mirroring the savant-orig
+      // `MANIFEST_DRAFT` payload at
+      // [`mod.rs:1917-1942`].
+      case "manifest_soul": {
+        const payload = args as Partial<SoulManifestPayload>;
+        const prompt = String(payload.prompt ?? "").trim();
+        if (!prompt) {
+          throw new Error("Mock IPC: manifest_soul requires `prompt`");
+        }
+        const name = payload.name?.trim() ? payload.name.trim() : null;
+        // snake_case `bootstrap_tier` matches the Rust IPC field name at
+        // `crates/core/src/types/mod.rs:75-79` and the dashboard's
+        // `sendControlFrame` payload shape (PB-F).
+        const tier: BootstrapTier =
+          (payload.bootstrap_tier as BootstrapTier | undefined) ?? "grounded";
+        // FID-008 — env var (tier 1) > vault (tier 2) > "" (no key).
+        const masterKey = effectiveMasterKey("openrouter");
+        // FID-009 — diagnostic: log the active source + key length so
+        // the user can verify which tier is authorizing the LLM call
+        // (env var vs vault entry vs none). Helps debug the "Template
+        // generated" fallback if the user thinks they have a key set
+        // but the mock IPC is reading from a different source.
+        // ECHO Law 12 — the `redact()` helper ensures the source
+        // discriminator + key length (NOT the key bytes) are logged.
+        if (typeof window !== "undefined") {
+          logger.info("manifest_soul: source + key length", {
+            source: _envMasterKey ? "env" : masterKey ? "vault" : "none",
+            key_len: masterKey.length,
+          });
+        }
+        // Optional model hint from the manifest page (reads
+        // `useLoadedConfig()`); falls back to the mock default if
+        // absent. Phase 2 will read `ai.manifestation_model` from
+        // savant-orig config.
+        const model = String(payload.model ?? "");
+        // Return a Promise directly (matches the `provision_session_key`
+        // pattern in this same mockIPC switch — the mock framework
+        // awaits the return value). The `builtSouls.unshift` side
+        // effect runs after the LLM call resolves so the entry
+        // reflects the actual result.
+        return generateSoul(prompt, name, tier, masterKey, model).then(
+          (result) => {
+            builtSouls.unshift({
+              ts: Date.now(),
+              prompt,
+              name,
+              tier,
+              status: result.status,
+              metrics: result.metrics,
+              content: result.content,
+              note: result.note,
+              error: result.error,
+            });
+            // Cap to last 20 to keep module state bounded.
+            while (builtSouls.length > 20) builtSouls.pop();
+            return result;
+          },
+        );
+      }
+
+      // FID-010 — Soul generation streaming (SSE). The renderer
+      // passes a `ManifestStreamChannel` (duck-typed Phase-1 mock
+      // of Tauri v2's `Channel<ManifestStreamEvent>`). The mock
+      // runs `generateSoulStream()` in a background task and pipes
+      // each yielded event through `channel.send()`. Returns a
+      // `{ cancel, done }` handle so the renderer can abort the
+      // in-flight stream (e.g. from the Cancel button) and wait
+      // for the loop to unwind.
+      //
+      // The channel is passed BY REFERENCE in browser mock
+      // (mockIPC is a function call, not serialized). Phase 2 Tauri
+      // will pass a real `Channel<ManifestStreamEvent>` and ignore
+      // the `_channel` payload field. The `done` promise is the
+      // IIFE's return value — it resolves when the background
+      // loop unwinds (naturally OR via abort).
+      case "manifest_soul_stream": {
+        const payload = args as Partial<SoulManifestPayload>;
+        const prompt = String(payload.prompt ?? "").trim();
+        if (!prompt) {
+          throw new Error("Mock IPC: manifest_soul_stream requires `prompt`");
+        }
+        const name = payload.name?.trim() ? payload.name.trim() : null;
+        const tier: BootstrapTier =
+          (payload.bootstrap_tier as BootstrapTier | undefined) ?? "grounded";
+        const masterKey = effectiveMasterKey("openrouter");
+        const model = String(payload.model ?? "");
+        // The renderer-supplied channel (see `manifestSoulStream`
+        // in `../lib/ipc.ts`). The `_streamId` is generated by
+        // the wrapper for future cross-scope cancellation; not
+        // needed today since `handle.cancel()` covers the only
+        // caller (the manifest page's Cancel button).
+        const channel = args._channel as
+          { send: (e: ManifestStreamEvent) => void } | undefined;
+        if (!channel) {
+          throw new Error(
+            "Mock IPC: manifest_soul_stream requires a `_channel` arg",
+          );
+        }
+        const controller = new AbortController();
+        // Background loop wrapped in an IIFE whose return value
+        // IS the `done` promise. The `try/catch` pattern is
+        // built into the IIFE — no separate `resolveDone`
+        // variable needed. This is cleaner than the
+        // `let resolveDone` + `new Promise` pattern (which trips
+        // TS's "used before assigned" check on `resolveDone`).
+        //
+        // CONTRACT: the `done` promise always RESOLVES (never
+        // rejects). Errors from `generateSoulStream` are caught
+        // in the `catch` block below and surfaced as `error`
+        // events via the channel, not as rejections. The renderer
+        // must check the channel's `onmessage` for the terminal
+        // event (`complete` | `error`) to know the stream's
+        // outcome — `await handle.done` is purely for cleanup
+        // timing (resets streaming state when the loop unwinds).
+        const done = (async (): Promise<void> => {
+          try {
+            for await (const event of generateSoulStream(
+              prompt,
+              name,
+              tier,
+              masterKey,
+              model,
+              controller.signal,
+            )) {
+              if (controller.signal.aborted) break;
+              channel.send(event);
+              if (event.type === "complete" || event.type === "error") {
+                break;
+              }
+            }
+          } catch (e) {
+            if (!controller.signal.aborted) {
+              channel.send({
+                type: "error",
+                error: `Stream failed: ${
+                  e instanceof Error ? e.message : String(e)
+                }`,
+              });
+            }
+          }
+        })();
+        return {
+          cancel: (): void => {
+            controller.abort();
+          },
+          done,
+        };
+      }
+
+      // FID-006 v3 — Swarm deployment (Phase 1 mock for the Tauri
+      // `bulk_manifest` command). Mirrors the server-side dispatch at
+      // `crates/gateway/src/handlers/mod.rs:645-665` (SEC #8 limit of
+      // 10 agents per BulkManifest request).
+      case "bulk_manifest": {
+        const agents = (args.agents as unknown[] | undefined) ?? [];
+        const SEC_8_LIMIT = 10;
+        if (agents.length > SEC_8_LIMIT) {
+          return {
+            status: "REJECTED",
+            reason: "SEC_8_LIMIT_EXCEEDED",
+          } satisfies BulkManifestResult;
+        }
+        // FID-013 — Persist the successfully-deployed swarm as the
+        // new baseline so the next `get_swarm_baseline` returns it.
+        // The renderer uses this to compute the diff preview
+        // (added/modified/removed vs the active deployment). Phase
+        // 2 will replace localStorage with a real Rust state read
+        // (parse `workspace-savant/SOUL.md` for each agent).
+        //
+        // NOTE: this write is NOT transactional with the deploy
+        // success — if `bulkManifest` returns SWARM_DEPLOYED but
+        // the localStorage write throws (quota exceeded /
+        // private-mode), the deploy is reported as success but
+        // the baseline is stale. Next diff would show every
+        // agent as "modified" (old baseline vs new proposed).
+        // Low risk in practice (localStorage is per-origin and
+        // not typically quota-constrained) but worth documenting.
+        try {
+          if (typeof window !== "undefined") {
+            window.localStorage.setItem(
+              LS_SWARM_BASELINE,
+              JSON.stringify(agents),
+            );
+          }
+        } catch {
+          /* noop — quota / private-mode fail doesn't fail the deploy */
+        }
+        return {
+          status: "SWARM_DEPLOYED",
+          count: agents.length,
+        } satisfies BulkManifestResult;
+      }
+
+      // FID-013 — Read the current active swarm baseline. Returns
+      // the last successfully-deployed `AgentManifestPlan[]` from
+      // localStorage, or `[]` if no baseline exists yet (first
+      // deploy — all proposed agents will be "ADDED" in the diff).
+      case "get_swarm_baseline": {
+        if (typeof window === "undefined") return [];
+        try {
+          const raw = window.localStorage.getItem(LS_SWARM_BASELINE);
+          if (!raw) return [];
+          const parsed = JSON.parse(raw) as unknown;
+          if (!Array.isArray(parsed)) return [];
+          // Validate each entry has the AgentManifestPlan shape
+          // (defensive — corrupt LS shouldn't crash the UI).
+          return parsed.filter(
+            (a): a is AgentManifestPlan =>
+              a !== null &&
+              typeof a === "object" &&
+              typeof (a as AgentManifestPlan).name === "string" &&
+              typeof (a as AgentManifestPlan).soul === "string",
+          );
+        } catch {
+          return [];
+        }
+      }
+
       default:
         throw new Error(`Mock IPC: unknown command "${cmd}"`);
     }
   });
 
-  // eslint-disable-next-line no-console
-  console.info(
-    "[savant] Tauri mock IPC installed (browser preview mode). Run `cargo tauri dev` for real IPC.",
+  // One-time install log. Helpful for dev (confirms the mock IPC
+  // is active in browser preview mode vs the real Tauri runtime
+  // in `cargo tauri dev`).
+  logger.info(
+    "Tauri mock IPC installed (browser preview mode). Run `cargo tauri dev` for real IPC.",
   );
 }

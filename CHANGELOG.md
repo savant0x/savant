@@ -32,12 +32,403 @@ and gets tagged on the next release. Cross-ref:
 
 ## [Unreleased]
 
-Work-in-progress since v0.0.2. Tagged `## v0.0.3 — YYYY-MM-DD` at the
+Work-in-progress since v0.0.2. Tagged `## v0.0.3 — YYYY-MM-DD
+
+### Fixed (FID-009 — Manifest page quality fix, 2026-07-13)
+
+- **DEPTH locked at 50%** [`src/lib/manifest-mock.ts:381`]: removed the
+  hardcoded `depth_score: 0.5` override on the template fallback. The
+  template's real depth is ~0.85-0.95 (256 lines / 18 sections / 1000+
+  words), not 0.5. The override was a temporary fix that became a
+  permanent bug.
+- **SECTIONS shows 26 but body has 18** [`src/lib/manifest-mock.ts:65,47`]:
+  changed the section regex from `/##/g` to `/^##\s+/gm` to ONLY count
+  top-level section headers (`## N. Title`) and NOT sub-section
+  headers (`### The Foundation`). The template has 18 `##` + 8 `###` =
+  26 total `##` matches with the old regex.
+- **Note truncation "generatio"** [`src/app/manifest/page.tsx:583`]:
+  extended the `builtSoul.note.slice(0, 120)` to `slice(0, 200)` to
+  avoid the previous "generatio" truncation on the template-fallback
+  note (143 chars). Full text is now in the `title` attribute for
+  hover. Same treatment for `builtSoul.error`.
+
+### Added (FID-012 — Per-section rating breakdown, 2026-07-13)
+
+- **`computeSectionMetrics(content)`** [`src/lib/manifest-mock.ts`]: new
+  utility that splits a SOUL.md body by its top-level `## ...` headers
+  and computes per-section metrics (lines, words, density,
+  completeness). Loose header regex (`/^(##\s+.+)$/gm`) to match LLM
+  output variations like `## 1) Title`, `## 1 Title`,
+  `## Section 1: Title`. Returns an empty array for empty content.
+- **`SectionRatingCard` component** [`src/components/section-rating-card.tsx`]:
+  new compact horizontal card (section number + truncated title +
+  Lines/Words pills + density + completeness dot). Color thresholds
+  for density: green >= 10, yellow >= 5, red < 5. Reusable per ECHO
+  Law 13 (utility-first).
+- **SECTIONS BREAKDOWN collapsible** [`src/app/manifest/page.tsx:Section 2`]:
+  new `<details>` block below the SoulBodyViewer showing one
+  `SectionRatingCard` per `## ...` section. Shows section count +
+  completeness count in the summary. Collapsed by default (18 cards
+  would dominate the page).
+
+### Added (FID-013 — Swarm deployment preview diff, 2026-07-13)
+
+- **`previewSwarmDiff(baseline, proposed)`** [`src/lib/swarm-diff.ts`]:
+  new utility that computes a 3-way diff (added/modified/removed/
+  unchanged) between two `AgentManifestPlan[]` arrays, matched by
+  `name`. Uses a sync FNV-1a 32-bit hash (`computeSwarmHashSync`) for
+  the per-agent equality check (avoids async crypto cost in the
+  render path). Async SHA-256 variant (`computeSwarmHash`) exposed
+  separately for future cryptographic-grade integrity flows.
+- **`BulkDiffViewer` component** [`src/components/bulk-diff-viewer.tsx`]:
+  new color-coded display: ADDED (green + plus icon), MODIFIED
+  (yellow + pen icon), REMOVED (red + minus icon), UNCHANGED
+  (muted, collapsed by default). Each item shows: name + content
+  snippet (first 100 chars of soul). MODIFIED items show
+  `before → after` hint.
+- **`get_swarm_baseline` IPC command** [`src/lib/mock-ipc.ts`]: new
+  case that reads the last successfully-deployed swarm from
+  `localStorage["savant.bulk.baseline"]`. Returns `[]` on a fresh
+  install (no baseline yet) or on missing/corrupt LS entry.
+- **`bulk_manifest` baseline persistence** [`src/lib/mock-ipc.ts:case
+  "bulk_manifest"`]: on successful deploy, writes the payload to
+  `LS_SWARM_BASELINE` so the next `get_swarm_baseline` returns it.
+  Documented as non-transactional (quota/private-mode failure leaves
+  baseline stale; low risk in practice).
+- **Two-step deploy flow** [`src/app/manifest/page.tsx:onBulkDeploy`]:
+  Step 1 (idle) parses JSON, fetches baseline, computes diff, shows
+  preview. Step 2 (preview) dispatches `bulk_manifest`, updates
+  baseline on success. New `onBulkCancel` clears the diff state +
+  `bulkError` + stale `bulkResult`. JSON textarea is `readOnly` during
+  preview/deploy to prevent the diff from going stale.
+
+### Added (FID-014 — Regenerate button, 2026-07-13)
+
+- **Regenerate button** [`src/app/manifest/page.tsx:Section 2 actions`]:
+  new button next to Copy + Revert. On click, restores the
+  persisted prompt + name to the textarea, increments a
+  `regenCount` state, and re-runs the LLM with the persisted
+  prompt + a `[variant #N]` suffix. Shows `Regen #N` when
+  regenCount > 0, plain "Regenerate" otherwise.
+- **Capture-then-reset pattern** [`src/app/manifest/page.tsx:onManifestSubmit`]:
+  the counter is read into a local `submitRegenCount` variable at
+  the top of the function, then immediately reset to 0 in React
+  state. The suffix uses the captured value, NOT the React state.
+  Guarantees the suffix is applied for EXACTLY the submit triggered
+  by `onRegenerate` — the next MANIFEST SOUL click sees
+  `regenCount=0` and gets no suffix.
+- **Race condition closed** [`src/app/manifest/page.tsx:submitDisabled
+  - Regenerate button`]: both the MANIFEST SOUL + Regenerate buttons
+  are gated on`regenPending`. The Regenerate callback's guard is
+  also extended:`if (!builtSoul || submitting || regenPending)`.
+  Closes the double-click race during the regenPending window.
+- **`regenPending` useEffect with ref** [`src/app/manifest/page.tsx`]:
+  the effect deps are INTENTIONALLY only `[regenPending, submitting]`
+  — `onManifestSubmit` is captured via a ref so the effect doesn't
+  re-run on every state tick.
+
+### Added (FID-010 — LLM response streaming, 2026-07-13)
+
+- **Soul generation streaming via OpenRouter SSE** [`src/lib/manifest-mock.ts:generateSoulStream`]:
+  replaces the blocking `manifest_soul` (10-30s UI freeze) with a
+  token-by-token async generator. Yields `preamble` / `chunk` /
+  `complete` / `error` events. Pre-yields the static `# SOUL.md`
+  header before the LLM call so the user sees the file shape
+  immediately even on a slow TTFB. AbortSignal-aware: the generator
+  stops yielding when the renderer's Cancel button fires.
+- **Buffered SSE parser** [`src/lib/manifest-mock.ts:parseSSEStream`]:
+  handles TCP fragmentation correctly — a single TCP packet can
+  split mid-JSON, so the parser maintains a string buffer and
+  only processes events that have a complete `\n\n` boundary.
+  Uses `TextDecoder({ stream: true })` for multi-byte UTF-8 splits.
+- **Channel-shaped IPC contract** [`src/lib/ipc.ts:createManifestStreamChannel` +
+  `manifestSoulStream`]: duck-typed Phase-1 mock of Tauri v2's
+  `Channel<ManifestStreamEvent>`. The renderer creates a channel,
+  subscribes via `onmessage`, passes it to `invoke("manifest_soul_stream", {...})`.
+  Returns a `{ cancel, done }` handle. **Phase 2 Tauri migration
+  is a drop-in replacement** — swap the channel factory for
+  `new Channel<ManifestStreamEvent>()` and the renderer code stays
+  unchanged.
+- **Mock IPC streaming command** [`src/lib/mock-ipc.ts:manifest_soul_stream`]:
+  background loop consumes `generateSoulStream()` and forwards
+  each event via `channel.send()`. Maintains an `activeStreams`
+  Map<streamId, AbortController> for explicit ID-based cancellation
+  via the new `cancel_manifest_stream` command (safety net for
+  cross-scope cancellation).
+- **Live preview card** [`src/app/manifest/page.tsx:Section 1.5`]:
+  visible only while a stream is in flight. Shows pulsing dot +
+  "Streaming Soul Manifestation" label + char count + elapsed
+  seconds + Cancel button. Live preview in a scrollable mono-font
+  box with a blinking cursor.
+- **rAF-throttled state updates** [`src/app/manifest/page.tsx:scheduleStreamFlush`]:
+  OpenRouter can emit 50-200 chunks/sec; we accumulate in a
+  `useRef<string>` and flush to React state via
+  `requestAnimationFrame` to avoid render thrashing.
+- **Elapsed-time ticker** [`src/app/manifest/page.tsx:streamStartTs` +
+  `streamElapsedSec`]: `setInterval(100ms)` updates the elapsed
+  seconds counter while a stream is in flight. Stops automatically
+  on stream end.
+- **Auto-cancel on resubmit** [`src/app/manifest/page.tsx:onManifestSubmit`]:
+  if a previous stream is in flight when the user clicks MANIFEST
+  SOUL again, the old stream is cancelled first. Prevents chunk
+  interleaving across concurrent streams.
+- **Cleanup on unmount** [`src/app/manifest/page.tsx` cleanup
+  useEffect]: cancels any in-flight stream + clears the rAF tick
+  on component unmount. Prevents memory leaks if the user
+  navigates away mid-stream.
+
+### Changed (FID-010 — LLM response streaming, 2026-07-13)
+
+- **`src/app/manifest/page.tsx:onManifestSubmit`** — rewrote from
+  single-Promise to channel-based streaming. The `await handle.done`
+  awaits the background loop's unwind. The Draft Buffer is
+  populated from the `complete` event's authoritative `result.content`
+  (not the lagging `streamBuffer`, which may have been batched by
+  rAF).
+- **`src/lib/manifest-mock.ts`** — the `ManifestResult` import is
+  now shared with the new `ManifestStreamEvent` type. The existing
+  `generateSoul()` non-streaming function is preserved (used by
+  the `manifest_soul` IPC for fallback paths + by future tests).
+
+### Fixed (FID-010 — LLM response streaming, 2026-07-13)
+
+- **UI freeze during soul generation** (10-30s blocking): replaced
+  with progressive rendering. The user now sees the preamble
+  immediately + each chunk as it arrives.
+- **No cancel option**: added a Cancel button that aborts the
+  in-flight fetch + SSE parser via the channel's `cancel()`.
+
+### Added (FID-009 — Manifest page quality fix, 2026-07-13)
+
+- **`src/lib/name-generator.ts`** (NEW): themed name generator with
+  100 unique names across 5 themes (mythological, sci-fi, tech, nature,
+  abstract). Exports `getRandomName()` (random theme + random name
+  with closure-scoped `lastPick` to avoid immediate repeats),
+  `getRandomNameByTheme(theme)`, `NAMES_BY_THEME` (theme → pool
+  mapping for future theme-filter UI), and `TOTAL_NAME_COUNT` /
+  `TOTAL_THEME_COUNT` constants for UI display.
+- **`src/lib/prompt-generator.ts`** (NEW): curated example prompts
+  with 20 prompts across different domains (hustler, security,
+  poet, strategist, zen, ceo, negotiator, quantum, chef, crisis,
+  philosopher, ai-safety, marine-bio, lawyer, chess, er-doctor,
+  jazz, vc, astrophysicist, product-designer). Exports
+  `getRandomPrompt()` (with `lastPromptPick` to avoid immediate
+  repeats) and `getRandomPromptByDomain(domain)`.
+- **`src/components/soul-body-viewer.tsx`** (NEW): custom Markdown
+  renderer (~250 lines, no external dependencies — no
+  `react-markdown` 50KB+). Splits content into blocks (by blank
+  lines), parses each block by type, renders with Tailwind classes.
+  Supports: `##` (h2 with accent), `###` (h3), `**bold**`, `` `code` ``,
+  `-`/`*` lists, `1.` lists, `|` tables, `>` blockquotes, `---` (hr),
+  indented code blocks, paragraphs. Replaces the previous plain
+  `<pre>` block.
+- **Random prompt generator** [`src/app/manifest/page.tsx`]: die icon
+  overlaid inside the prompt textarea (absolute bottom-right). Click
+  picks a random prompt from the 20 curated examples. Same
+  "lastPick avoids immediate repeat" pattern as the name generator.
+- **Die icon overlay inside name input** [`src/app/manifest/page.tsx`]:
+  replaced the side-by-side flex layout with an absolute-positioned
+  icon inside the input (right edge, `pr-10` on input). Same
+  treatment for the prompt textarea (bottom-right, `pb-10` on textarea).
+- **Professional placeholder text** [`src/app/manifest/page.tsx`]:
+  replaced the hustler example placeholder with a professional
+  description ("Describe the entity's core directive — its purpose,
+  values, and operating philosophy…"). The placeholder now explains
+  what the system prompt does (forces every section to be UNIQUE).
+
+### Changed (FID-009 — Manifest page quality fix, 2026-07-13)
+
+- **`src/components/rating-box.tsx`** (REWRITE): enterprise-grade
+  redesign with larger value typography (text-xl → text-2xl on
+  hover), hover state (border becomes accent + scale-up 1.02x +
+  accent shadow), thicker progress bar (h-1 → h-1.5), gradient
+  background, accent bar on left edge, optional `icon` + `sublabel`
+  props, smoother transitions (300ms on hover, 700ms on progress bar).
+  Backwards-compatible: all existing usages work without changes.` at the
 next release cut per release-only-versioning discipline. Captures the
-in-repo `fame0528`/`savant-protocol` cleanup performed on 2026-07-12.
+in-repo `fame0528`/`savant-protocol` cleanup performed on 2026-07-12
+and the subsequent quality fixes (FID-006 v3, FID-007, FID-008,
+FID-009) on 2026-07-13.
+
+### Added
+
+- **Agent-workspace convention (`workspace-savant/`)** — FID-004r2:
+  the agent-workspace layout anchored strictly in savant-orig
+  filesystem evidence. Sole human-scaffolded file:
+  `workspace-savant/SOUL.md` (YAML frontmatter + persona body
+  transcribed from [`src/app/chat/page.tsx:49-53`] SAVANT_SOUL
+  const). **Three elements are runtime outputs and are not
+  pre-scaffolded** (per Spencer's LEARNINGS-ownership correction on
+  2026-07-13):
+  - `skills/` — auto-scaffolded at agent boot per
+    [`crates/agent/src/manager.rs:32`] (`tokio::fs::create_dir_all`).
+  - `LEARNINGS.md` — agent-written at runtime per
+    [`crates/agent/src/learning/parser.rs:25, 42`] (parser reads
+    if-present; returns `Ok(0)` when absent).
+  - `LEARNINGS.jsonl` — parser-managed at runtime per
+    [`crates/agent/src/learning/parser.rs:26, 69-77`] (`OpenOptions
+    ::new().create(true).append(true)`).
+  Cross-ref: [`dev/fids/FID-2026-07-12-004r2-workspace-savant.md`].  Original FID-004 (r0, proposed invented layout: `README.md`,
+  `manifest.toml`, `soul/savant.soul.yaml`, `evolution.log`) was
+  audit-rejected on 2026-07-13 for producing claims not present in the
+  savant-orig filesystem and is archived at
+  [`dev/fids/archive/FID-2026-07-12-004-workspace-savant-system.md`]
+  with the full divergent-table annotation.
+
+- **Soul-manifest feature + workspace-savant scaffold (FID-006 v2):**
+  source-faithful rebuild of the savant-orig persona system per
+  `LESSON-018` (no deviation, no invented schemas). **Architecture
+  (Option B+D):** `workspace-savant/SOUL.md` is the canonical
+  disk-resident persona source (mirroring
+  [`crates/core/src/fs/registry.rs:192`] disk loader + [`registry.rs:320-326`]
+  default-write); `src/lib/soul.ts` is the build-time re-export via
+  Next.js `?raw` import (production-safe under [`next.config.mjs:4`]
+  `output: "export"`); both `src/app/chat/page.tsx` and
+  `src/app/manifest/page.tsx` consume from `@/lib/soul` (ECHO Law 13).
+  The drift class that produced FID-004r2/005r2/006-v1
+  (YAML-frontmatter hallucination, `/api/soul` runtime route blocked
+  by `output: "export"`) is fully closed. **10 file changes (7 NEW +
+  1 EDIT build-config + 1 EDIT chat + 1 REWRITE manifest):**
+  - `workspace-savant/SOUL.md` (NEW) — literal `registry.rs:320-326`
+    default (`# Soul Configuration\n\n**Name:** Savant\n\n## Terminal
+    Mantra\n\nYou are a Savant autonomous agent. Operate with precision,
+    security, and autonomy.`).
+  - `workspace-savant/AGENTS.md` (NEW) — literal `registry.rs:327-378`
+    default (full operating instructions + private diary system spec).
+  - `workspace-savant/LEARNINGS.md` (NEW) — literal `registry.rs:379-386`
+    default.
+  - `workspace-savant/EVOLUTION.jsonl` (NEW, empty) — `registry.rs:213-219`
+    seeds empty.
+  - `workspace-savant/skills/.gitkeep` (NEW, empty) — `manager.rs:33-34`
+    `tokio::fs::create_dir_all(skills_dir)`.
+  - `src/lib/soul.ts` (NEW) — `?raw` re-export of SOUL.md +
+    `parse_soul_examples` 1:1 port of
+    [`crates/agent/src/soul_examples.rs:31`] + 6 typed exports
+    (`SOUL_PROMPT`, `SOUL_BASELINE_HASH`, `OCEAN_DEFAULT_TRAITS`,
+    `SOUL_EXAMPLES`, `parse_soul_examples`, `SoulExample` interface).
+  - `src/types/raw.d.ts` (NEW) — global `declare module "*?raw"`
+    ambient declaration (resolved by tsconfig `src/**/*.ts` include).
+  - `next.config.mjs` (EDIT) — added webpack rule
+    `{ test: /\.md$/, type: "asset/source" }` to enable `?raw` for
+    `.md` files.
+  - `src/app/chat/page.tsx` (EDIT) — replaced 8-line `const SAVANT_SOUL`
+    with `import { SOUL_PROMPT } from "@/lib/soul";` (the const was
+    a stop-gap that this FID retired).
+  - `src/app/manifest/page.tsx` (REWRITE) — 3 cards wired to
+    `@/lib/soul`: **Identity & Vibe** (renders SOUL_PROMPT body),
+    **Evolution State** (OCEAN traits + SOUL_BASELINE_HASH),
+    **Operating Directives** (file map). Cards map 1:1 to
+    `ContextAssembler.assemble_system_prompt` sections 1-3 of the
+    persona layer.
+  - **NOT pre-scaffolded** (per savant-orig: `USER.md`/`IDENTITY.md`/
+    `LEARNINGS.jsonl` are not auto-written blank; `LEARNINGS.md`/
+    `LEARNINGS.jsonl` are runtime writes per `learning/parser.rs:40-42,
+    70-73`).
+  - **AUDIT (all 4 gates PASS):** `npx tsc --noEmit` exit 0 (no
+    errors, TS2664 `?raw` augmentation gone); `npm run build` success
+    (Next.js 15.5.19, 16/16 static pages generated, 2/2 exported, route
+    `/manifest` 1.78 kB, `/chat` 3.57 kB); `npx prettier --check`
+    clean on the 3 FID-006 v2 files (the 22 pre-existing repo files
+    flagged are NOT in this FID's scope); FID-151 grep gate
+    `grep -rn 'from "@/lib/soul"' src/` returns exactly 2 consumers
+    (chat + manifest), 6 exports from `@/lib/soul`. `code-reviewer-minimax-m3`:
+    APPROVE (all 6 criteria PASS).
+  - Cross-ref: [`dev/fids/archive/FID-2026-07-13-006-v2-soul-manifest-and-workspace-scaffold.md`].
+  - **Superseded by FID-006 v3 (2026-07-13):** the 3-card _viewer_ was
+    a drift — the actual feature is a _builder_ with form input. v3
+    replaces the manifest page with a 4-section builder (input box +
+    status panel + BulkManifest + Active Baseline). **The v2
+    file-resident persona infrastructure is kept unchanged:**
+    `src/lib/soul.ts` (build-time `?raw` re-export), `src/types/raw.d.ts`
+    (global `?raw` ambient), `next.config.mjs` webpack `asset/source`
+    rule, `workspace-savant/{SOUL,AGENTS,LEARNINGS}.md` + `EVOLUTION.jsonl`
+    - `skills/`, and `src/app/chat/page.tsx`'s `import { SOUL_PROMPT }
+    from "@/lib/soul"` (replacing the const-string stop-gap). Only the
+    `/manifest` viewer is replaced. See
+    [`dev/fids/FID-2026-07-13-006-v3-soul-builder.md`].
+
+- **Soul Builder feature (FID-006 v3):** interactive authoring flow
+  mirroring savant-orig's `ControlFrame::SoulManifest` +
+  `ControlFrame::BulkManifest` + `generate_template_soul` chain
+  ([`crates/core/src/types/mod.rs:75-86, 189-194, 1153-1183`],
+  [`crates/gateway/src/handlers/mod.rs:645-665, 2031`]). Supersedes v2's
+  read-only 3-card viewer with a **4-section builder**:
+  - `src/types/control-frames.ts` (NEW) — TypeScript mirrors of
+    `BootstrapTier` (4 variants, snake_case), `BootstrapStatus`
+    (3 variants, `Ready`/`Pending`/`Degraded`, snake_case with
+    `#[default] Ready`), `AgentManifestPlan` (3 fields:
+    `name`/`soul`/`identity?`), `SoulManifestPayload`,
+    `BulkManifestPayload`, `BulkManifestResult`. All names are exact
+    pasteback mirrors — no UX rename.
+  - `src/lib/manifest-mock.ts` (NEW) — `generate_template_soul(prompt,
+    name, birthDate, _tier?)` pure function mirror of
+    `handlers/mod.rs:2031`; Phase 1 produces a faithful structural
+    subset (header + sections 1-3: Systemic Core & Origin,
+    Psychological Matrix AIEOS, Architectural Lineage) + a marker for
+    sections 4-18. `today_iso()` helper for `birth_date`.
+  - `src/lib/mock-ipc.ts` (EDIT) — two new cases: `manifest_soul`
+    (returns the templated string + persists to module-scoped
+    `builtSouls` map, cap 20) and `bulk_manifest` (enforces SEC #8
+    limit of 10 agents per `handlers/mod.rs:647-655`; returns
+    `{ status: "REJECTED", reason: "SEC_8_LIMIT_EXCEEDED" }` on
+    overflow).
+  - `src/lib/ipc.ts` (EDIT) — two new typed wrappers
+    `manifestSoul(payload: SoulManifestPayload): Promise<string>` +
+    `bulkManifest(payload: BulkManifestPayload): Promise<BulkManifestResult>`.
+  - `src/app/manifest/page.tsx` (REWRITE) — 4 sections in vertical
+    order: **(1) Soul Manifestation Engine** (builder form: name
+    text input + prompt textarea + BootstrapTier select with
+    4 options + Manifest Soul submit button + status badge
+    Pending→Ready with 800ms setTimeout for the simulated async
+    gateway round-trip); **(2) Draft Buffer** (reads
+    `localStorage["LS_SOUL_BUILT"]` with cross-tab `storage` event
+    sync, shows the most recent built soul with timestamp + tier +
+    body preview, Copy to Clipboard + Revert buttons); **(3) Swarm
+    Deployment** (JSON textarea for `AgentManifestPlan[]` + Deploy
+    Swarm button + success metric display); **(4) Active Baseline**
+    (the v2 3 cards: Identity & Vibe / Evolution State / Operating
+    Directives wired to `@/lib/soul` — the read-only canonical
+    baseline).
+  - **Persistence strategy:** `Option A` — `localStorage["LS_SOUL_BUILT"]`
+    for the builder's output; build-time `?raw` `workspace-savant/SOUL.md`
+    remains the chat baseline (LESSON-018 invariant preserved). The
+    browser cannot write to `workspace-savant/SOUL.md` in Phase 1
+    (no Rust daemon; Next.js 15 `output: "export"` is a static bundle).
+    The chat's `src/app/chat/page.tsx` is unchanged — its
+    `SOUL_PROMPT` continues to read the build-time canonical persona.
+  - **AUDIT (gated on Spencer ratify):** tsc + build (output:export)
+    - prettier + grep gates (FID-151 still 2 consumers +
+    `invoke("manifest_soul"` + `invoke("bulk_manifest"` callers)
+    - `code-reviewer-minimax-m3` APPROVE. See FID body §Verification
+    - §Perfection Loop for gate definitions.
+  - Cross-ref: [`dev/fids/FID-2026-07-13-006-v3-soul-builder.md`].
 
 ### Fixed
 
+- **Manifest page runtime TypeError: `Cannot read properties of undefined (reading 'lines')`.**
+  The `LS_SOUL_BUILT` localStorage entries written BEFORE the FID-006 v3
+  reopen don't have the `metrics` field (which was added in the v3
+  reopen). When the page hydrates from localStorage, the AAA_RATING
+  badge tries to access `builtSoul.metrics.lines` and crashes the
+  entire page. The fix: migrate stale entries on read in the
+  `useEffect` hydration (`status` defaults to `"template"`,
+  `metrics` defaults to `{ lines: 0, sections: 0, depth_score: 0.5 }`)
+  - add defensive optional chaining (`builtSoul.metrics?.lines ?? 0`)
+  on all 3 AAA_RATING reads (className, title, percentage). Affects 1
+  file: [`src/app/manifest/page.tsx`]. No data loss — the user's
+  pre-reopen soul body is preserved; only the missing fields are
+  filled with the legacy template defaults.
+- **Manifest page Copy button: silent failure in non-secure contexts.** The
+  previous implementation used only `navigator.clipboard.writeText()`,
+  which fails silently in the Tauri webview (no clipboard plugin
+  enabled), in unfocused documents, and in non-HTTPS contexts. The
+  fix tries the modern Clipboard API first, then falls back to a
+  hidden `<textarea>` + `document.execCommand("copy")` strategy that
+  works universally. Also adds a 2-second "Copied!" success indicator
+  (icon `fa-copy` → `fa-check`, text → "Copied!", border/bg → success
+  color) so the user has visible confirmation. Affects 1 file:
+  [`src/app/manifest/page.tsx`]. The `onCopy` callback now tries both
+  strategies and only surfaces the error state when both fail.
 - **HTTP-Referer header bug** [src-tauri/src/inference/openrouter.rs:79]:
   the `HTTP-Referer` was hardcoded to `https://github.com/fame0528/Savant`
   (boilerplate-era leftover from when the project booted off the
@@ -66,6 +457,182 @@ in-repo `fame0528`/`savant-protocol` cleanup performed on 2026-07-12.
   NOTE section) are **kept as historical documentation** of the
   boilerplate→project separation discipline correction. Trimming would
   lose the audit trail.
+- **Coding standards: `max_file_lines` TS override bumped 400 → 1,000.** Per
+  Spencer's ratification on 2026-07-13 ("bump the limit from 400 to 1,000 -
+  because there are other files like page.tsx that also break 400 lines. I
+  think 1,000 is healthy as long as we continue to build utility first").
+  The bump aligns with the ECHO "build utility first" philosophy: page-level
+  components with form state + multiple sections + IPC + persistence are
+  legitimately utility-dense and 1,000 is the healthy ceiling. The v3
+  `/manifest` page at ~470 lines (FID-006 v3) and the 747-line
+  `src/app/settings/page.tsx` (FID-0003) are now both under the new ceiling.
+  FID-0007 (`manifest-page-split`) is superseded.
+  [`coding-standards/typescript.md`].
+- **Input border styling: explicit white/black per theme.** All form inputs
+  (text inputs, textareas, selects) across `/chat`, `/manifest`, and
+  `/settings` now have a theme-aware slight border: `rgba(255, 255, 255, 0.4)`
+  in dark mode, `rgba(0, 0, 0, 0.4)` in light mode. Implemented via a new
+  `--input-border-color` CSS variable in `globals.css` (per-theme) +
+  `border-[color:var(--input-border-color)]` Tailwind arbitrary value on
+  each input. Replaces the previous `border border-default/40` (HeroUI
+  semantic auto-adapting) and `border border-white/20` (settings dark-only)
+  patterns. Per Spencer's directive on 2026-07-13 ("all input boxes need to
+  have a slight border, white for dark pages, black for light pages").
+  Affects 8 form elements: chat textarea (1) + manifest name input + tier
+  select + prompt textarea + bulk-JSON textarea (4) + settings master-key
+  input + 2 provider selects (3). [`src/app/globals.css`,
+  `src/app/chat/page.tsx`, `src/app/manifest/page.tsx`,
+  `src/app/settings/page.tsx`].
+- **FID-006 v3 v2 reopen — prompt-driven identity + UI redesign.** Per
+  Spencer's 8-point feedback on the v1 LLM-driven implementation
+  (tested with "a hustler by nature, with the ability to turn $0
+  into $100" — got 90% filler content that ignored the prompt, plus
+  the char counter was in the wrong section, Section 4 was showing
+  dummy data, the die icon for name generation was missing, only one
+  rating box existed, the tier dropdown had a white background, the
+  Draft Buffer design was "terrible", and Section 3 was wasting
+  space). The fix: the system prompt in
+  [`src/lib/soul-generation-system-prompt.ts`] now leads with a
+  "CRITICAL DIRECTIVE: PROMPT-DRIVEN IDENTITY" section that BANS
+  generic AAA/foundation/sovereign/WAL/CCT language and forces every
+  section to be UNIQUE to the prompt's domain (with "hustler"
+  examples throughout as the canonical anti-pattern). The manifest
+  page is now 3 sections: **(1)** Soul Builder form (with new
+  `fa-dice` die icon that generates random names from a 20-name
+  pool: Prometheus, Athena, Nova, Orion, etc.; tier `<select>`
+  given `colorScheme: "dark"` + `bg-[color:var(--surface)]` to fix
+  the white dropdown); **(2)** Draft Buffer (enterprise-grade
+  metadata grid: 4 cards NAME/TIER/STATUS/GENERATED + rating grid:
+  5 cards LINES/SECTIONS/DEPTH/HASH/INFRA + character counter
+  moved here from Section 1 + soul body + Copy + Revert actions);
+  **(3)** Swarm Deployment (now a `<details>` element, collapsed
+  by default to save space). **Section 4 removed** — was showing
+  the chat's canonical persona ("Savant") instead of the just-built
+  soul, which Spencer correctly called "CLEARLY not wired". The
+  canonical persona is shown in the chat page header, not needed
+  here. A new reusable `RatingBox` component at
+  [`src/components/rating-box.tsx`] (label + value + optional 0-1
+  bar + color variant) per ECHO Law 13 utility-first. 4 file
+  changes: [`src/lib/soul-generation-system-prompt.ts`] (rewrite) +
+  [`src/components/rating-box.tsx`] (NEW) +
+  [`src/app/manifest/page.tsx`] (rewrite) + this entry.
+- **LLM-driven soul manifestation (FID-006 v3 reopened).** Per Spencer's
+  test rejection on 2026-07-13 ("missing the mark by A LOT" — tested
+  with prompt "a proactive hustler, with the ability to turn $0 into
+  $100 with sheer will." and got a generic INTJ/architect template that
+  ignored the hustler intent and only had 3 of 18 sections), the
+  static LLM-less template was replaced with a real OpenRouter
+  `POST /v1/chat/completions` call using the 18-section AAA Master
+  Framework Prompt from
+  [`crates/gateway/src/handlers/mod.rs:1751-1831`]. LLM params match
+  savant-orig: `max_tokens: 16384`, `temperature: 0.78`, headers
+  `HTTP-Referer: https://github.com/Savant-AI/Savant` +
+  `X-Title: Savant Soul Manifestation Engine`. Tier-specific YAML
+  grounding (PureGeneration skips; Grounded/Scaffolded/Aspirational
+  inject a static `ACTUAL_SYSTEM_STATE` block — the renderer has no
+  `gather_system_context` in Phase 1) per [`mod.rs:1834-1852`].
+  Metrics calculation (`lines`, `sections`, `depth_score`) ports
+  `calculate_semantic_depth` from [`mod.rs:2014-2026`]. The static
+  18-section template fallback (for no-key mode) is also expanded to
+  all 18 sections (was 1-3 + marker) so the offline path matches the
+  online path's structural shape. `soul_blake3` uses SHA-256 in browser
+  (BLAKE3 not in SubtleCrypto; field name kept for IPC contract
+  parity). New UI: character counter below the prompt textarea,
+  `AAA_RATING` badge in the Draft Buffer (depth_score percentage with
+  status-color coded for complete/template/error),
+  `MANIFESTATION SEQUENCE IN PROGRESS…` submit button text. Without an
+  OpenRouter master key in `mockMasters["openrouter"]`, the mock
+  returns the static template with `status: "template"` and a
+  `note: "..."`. 6 file changes:
+  [`src/lib/soul-generation-system-prompt.ts`] (NEW) +
+  [`src/lib/manifest-mock.ts`] (REWRITE — added `generateSoul()` +
+  expanded `generateTemplateSoul()` to all 18 sections) +
+  [`src/lib/mock-ipc.ts`] + [`src/lib/ipc.ts`] +
+  [`src/types/control-frames.ts`] (added `ManifestResult` interface +
+  `model?` field on `SoulManifestPayload`) +
+  [`src/app/manifest/page.tsx`].
+
+### Removed
+
+- **Drift-cleanup (FID-2026-07-12-004-system, FID-004r2, FID-005-feature, FID-005r2):** all 4 active FIDs created during the 2026-07-12/13 drift session (paraphrased citations of savant-orig filesystem evidence without re-verification pasteback) archived to `dev/fids/archive/` with `[DRIFT-REJECTED]` filename marker. The corrupt duplicate of `FID-004-system` in archive (64-line stub) was overwritten with the full 364-line active version; the hallucinated `workspace-savant/{README.md, manifest.toml, soul/savant.soul.yaml, evolution.log}` layout proposed in FID-004 r0 is explicitly **not implemented**. `workspace-savant/SOUL.md` remains on disk as a real artifact, but its previously-claimed provenance (line citations into `crates/agent/src/manager.rs:32`, `learning/parser.rs:25,42,26,69-77`, `soul_examples.rs:3`, `context.rs`, `workspace_guard.rs:6-50`) is unverified pending a freshly authored FID grounded in actually-read savant-orig evidence per the LESSON-016 Draft-and-Prove Rule captured in [`dev/LEARNINGS.md`]. The soul-manifest feature will be authored A-to-Z in a fresh FID with verified-line pastebacks only — not an `FID-005r3` resurrection.
+
+---
+
+### Added (FID-009 — Perfection Loop, 2026-07-13)
+
+- **Test suite, 5 new files, 68/68 passing** [src/lib/name-generator.test.ts,
+  src/lib/prompt-generator.test.ts, src/lib/manifest-mock.test.ts,
+  src/lib/swarm-diff.test.ts, src/components/soul-body-viewer.test.tsx]:
+  full unit test coverage for the pure functions across FID-006 v3 /
+  007 / 009 / 010 / 012 / 013 / 014. Coverage map: name-generator
+  (5 themes, no-repeat lastPick) + prompt-generator (20 domains,
+  no-repeat lastPromptPick) + manifest-mock (computeSectionMetrics
+  edge cases + calculateSemanticDepth variance-based 0.5-lock test
+  - generateTemplateSoul 18-section shape + parseSSEStream TCP
+  fragmentation + [DONE] sentinel + malformed chunks + abort) +
+  swarm-diff (computeSwarmHashSync stability + previewSwarmDiff
+  4-bucket classification) + soul-body-viewer (h2/h3 + **bold** +
+  `code` + lists + tables + blockquotes + hr). FID-014
+  (regenerate button) intentionally has no unit tests — the
+  `regenPending` useEffect + capture-then-reset pattern lives in
+  page.tsx and would require React Testing Library; verified
+  through 5 code-reviewer passes + manual smoke test.
+- **vitest setup file** [vitest.setup.ts]: polyfills
+  `globalThis.crypto` from `node:crypto` `webcrypto` if
+  `crypto.subtle` is missing (happy-dom's native implementation
+  is incomplete). Required by `calculateSoulHash` and
+  `computeSwarmHash` SHA-256 calls. Idempotent — only installs if
+  `crypto.subtle` is missing. Also documents the FID-015 follow-up
+  (`// TODO(fid-015): polyfill localStorage`) so the next run isn't
+  silently green-with-one-excluded for the pre-existing
+  `src/lib/ipc.test.ts` failure.
+- **`esbuild.jsx: "automatic"`** in [vitest.config.ts]: matches the
+  production Next.js build's JSX transform so `.tsx` source files
+  (which don't `import React`) work in the test runner without
+  modification. Avoids polluting source files with dead `import
+  React` lines.
+- **`parseSSEStream` exported for testability** [src/lib/manifest-mock.ts]:
+  was a module-private function; now exported so the test file can
+  exercise the TCP-fragmentation path. No behavior change for
+  production callers.
+- **Nested-list depth field** [src/components/soul-body-viewer.tsx]:
+  `parseList()` now returns a `depth` field for nested list items
+  (0 = top-level, 1 = 2-space indent, 2 = 4-space indent) so the
+  test can assert the parser handles GitHub-style nested lists.
+  The renderer continues to use 0/1 (no 3-level deep lists in the
+  canonical SOUL.md).
+- **Markdown parser hardening** [src/components/soul-body-viewer.tsx]:
+  documents that an unclosed `**` (e.g., `**foo` without a
+  matching `**foo**`) is rendered as plain text per the GitHub
+  Flavored Markdown spec, not as a parser error. Added the
+  `renderInline` helper to keep the `**bold**` + `` `code` ``
+  parsing logic in one place (was duplicated across the table +
+  paragraph + list-item renderers).
+- **HMR reset documented** [src/app/manifest/page.tsx]: the
+  `lastPick` and `lastPromptPick` module-scoped variables may
+  reset to `null` on hot module replacement. This is intentional
+  and does NOT persist to sessionStorage (would leak across
+  sessions; out of scope for FID-009). The doc comment makes this
+  explicit for future maintainers.
+
+### Added (FID-015 — happy-dom localStorage polyfill, 2026-07-13)
+
+- **localStorage polyfill implemented** [vitest.setup.ts]:
+  Map-backed shim matching the `Storage` interface (getItem /
+  setItem / removeItem / clear / key / length) now satisfies
+  `src/lib/mock-ipc.ts:129:35` `hydrateMasters` and all 5
+  pre-existing `src/lib/ipc.test.ts` cases. The polyfill guard
+  checks `typeof getItem !== "function"` (catches both undefined
+  and broken-object cases — happy-dom in some configurations
+  provides a localStorage OBJECT that exists but lacks methods).
+  Installed via `Object.defineProperty` to bypass non-writable
+  property protection; set on both `globalThis` and `window`
+  when they differ. Includes a `beforeEach` hook
+  (`globalThis.localStorage?.clear()`) for state isolation
+  between tests. The `--exclude='**/ipc.test.ts'` flag is no
+  longer needed — the test suite is now **actually** green at
+  73/73 (was 68/68 with one test silently excluded). See
+  [`dev/fids/archive/FID-2026-07-13-015-happy-dom-localstorage.md`].
 
 ---
 

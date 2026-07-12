@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Savant Core — Phase 1",
+        "title": "Savant — Phase 1",
         "width": 1100,
         "height": 760,
         "resizable": true,
