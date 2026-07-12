@@ -3,7 +3,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Savant",
-  description: "The proactive AI agent desktop shell",
+  description:
+    "Next.js 15 + Tauri 2 proactive AI shell. Currently in a renderer-first Phase 1 rebuild (Rust core pending). v0.0.3 introduces the Soul Builder, LLM streaming, and Swarm Deployment diffing.",
   // Favicon fix (2026-07-13): the Savant favicon files live in
   // `public/favicon/` but the layout had no `icons` metadata, so
   // Next.js was falling back to the default Vercel icon. Explicit

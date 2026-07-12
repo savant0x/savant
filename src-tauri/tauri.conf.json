@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2.0.0",
-  "productName": "savant-core",
+  "productName": "Savant",
   "version": "0.0.3",
   "identifier": "com.savant.core",
   "build": {
@@ -27,7 +27,7 @@
   "bundle": {
     "active": false,
     "category": "Productivity",
-    "shortDescription": "Savant proactive AI agent desktop app (Phase 1)",
-    "longDescription": "Tauri 2 + React 19 + HeroUI v3 alpha. Phase 1: master-key vault + OpenRouter smoke test."
+    "shortDescription": "Savant AI desktop shell (Renderer-first rebuild, Rust core pending)",
+    "longDescription": "Next.js 15 + Tauri 2 proactive AI shell. Currently in a renderer-first Phase 1 rebuild (Rust core pending). v0.0.3 introduces the Soul Builder, LLM streaming, and Swarm Deployment diffing."
   }
 }

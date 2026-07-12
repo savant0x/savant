@@ -96,20 +96,26 @@ Heavy reference material and research notes are gitignored:
 
 ---
 
-## Architecture (Phase 1 + Phase 2 slots)
+## Architecture
+
+**v0.0.3 status:** the renderer is the live surface and ships the
+Soul Builder, SSE streaming, and Swarm Deployment diffing. The
+Tauri 2 daemon provides the master-key vault + OpenRouter inference
+client as a thin IPC layer over the renderer. The Rust cognitive
+core (Trigger, State, Cognitive loops) is **not yet built** — the
+slots below are reserved for follow-on work, not live today.
 
 ```text
-[ Next.js 15 + React 19 + HeroUI v3 renderer (App Router, static export) ] <-- IPC --> [ Tauri 2 Rust daemon ]
+[ Next.js 15 + React 19 + HeroUI v3 renderer (App Router, static export; LIVE v0.0.3) ] <-- IPC --> [ Tauri 2 Rust daemon (auth + inference; LIVE v0.0.3) ]
                                                           |
                                                           +-- master-key vault (auth.json, OS-specific path)
                                                           +-- OpenRouter client (reqwest, Bearer auth)
-                                                          +-- Phase 2: trigger bus + hybrid tick
-                                                          +-- Phase 2: SQLite WAL durable state
-                                                          +-- Phase 3+: dual-loop cognitive engine
+                                                          |
+                                                          |   [ Rust cognitive core — NOT YET BUILT ]
+                                                          +-- - - - Phase 2: trigger bus + hybrid tick
+                                                          +-- - - - Phase 2: SQLite WAL durable state
+                                                          +-- - - - Phase 3+: dual-loop cognitive engine
 ```
-
-Phase 1 ships only the left two columns. Phase 2+ slots are reserved in the
-daemon module structure (`src-tauri/src/{security,inference,trigger,state,cognitive}/`).
 
 ---
 
@@ -153,17 +159,17 @@ See `coding-standards/release-workflow.md` for the full rule. Cross-ref:
 
 ## Roadmap
 
-| Version | Phase | Shipped                                                                                                            |
-| :------ | :---- | :----------------------------------------------------------------------------------------------------------------- |
-| v0.0.1  | 1     | Tauri 2 shell + master-key vault + OpenRouter smoke-test                                                           |
-| v0.0.2  | 1     | Auto-derived session key (FID-0003) + two-tier credential architecture + vitest/Playwright test framework |
+| Version | Phase | Shipped                                                                                                                                               |
+| :------ | :---- | :---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| v0.0.1  | 1     | Tauri 2 shell + master-key vault + OpenRouter smoke-test                                                                                              |
+| v0.0.2  | 1     | Auto-derived session key (FID-0003) + two-tier credential architecture + vitest/Playwright test framework                                             |
 | v0.0.3  | 1     | **Now.** Soul Builder (FID-006 v3) + LLM streaming (FID-010) + swarm diff (FID-013) + Perfection Loop (FID-009) + env key security + dev server fixes |
-| v0.0.10 | 1     | Phase 1 stabilization (before minor bump)                                                                          |
-| v0.1.0  | 2     | Trigger bus + hybrid tick + SQLite WAL durable state + dual-loop init                                              |
-| v0.1.10 | 2     | Phase 2 stabilization (before minor bump)                                                                          |
-| v0.2.0  | 3     | Tiered inference (fast loop + slow reflection) + observability                                                     |
-| v0.3.0  | 4     | Full UI shell (multi-pane dashboard + agent observability)                                                         |
-| v0.4.0  | 5     | Windows DPAPI hardening + release signing + auto-update                                                            |
+| v0.0.10 | 1     | Phase 1 stabilization (before minor bump)                                                                                                             |
+| v0.1.0  | 2     | Trigger bus + hybrid tick + SQLite WAL durable state + dual-loop init                                                                                 |
+| v0.1.10 | 2     | Phase 2 stabilization (before minor bump)                                                                                                             |
+| v0.2.0  | 3     | Tiered inference (fast loop + slow reflection) + observability                                                                                        |
+| v0.3.0  | 4     | Full UI shell (multi-pane dashboard + agent observability)                                                                                            |
+| v0.4.0  | 5     | Windows DPAPI hardening + release signing + auto-update                                                                                               |
 
 Each phase lives as a FID under `dev/fids/` as it ships.
 

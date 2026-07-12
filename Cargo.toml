@@ -8,7 +8,7 @@ edition = "2021"
 license = "MIT"
 authors = ["Spencer — Vera (agent, codebuff/minimax-m3)"]
 rust-version = "1.86"
-description = "Savant proactive AI agent (Tauri 2 + React 19)"
+description = "Savant AI desktop shell (Renderer-first rebuild, Rust core pending)"
 
 [workspace.dependencies]
 # Async runtime

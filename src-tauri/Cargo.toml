@@ -5,7 +5,7 @@ edition.workspace = true
 license.workspace = true
 authors.workspace = true
 rust-version.workspace = true
-description = "Savant Phase 1 — Tauri 2 daemon (vault + OpenRouter inference)"
+description = "Savant AI desktop shell (Renderer-first rebuild, Rust core pending)"
 readme = "../README.md"
 
 [lib]
