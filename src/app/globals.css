@@ -1,0 +1,58 @@
+/* Savant renderer globals. HeroUI v3 is CSS-first: no provider, no Tailwind plugin. We import Tailwind v4 (for utility classes like bg-surface, text-muted) and @heroui/styles (for the design tokens and component CSS) here. The @source directive tells Tailwind v4 to scan src for class names so the JIT compiler generates the right utilities. */
+
+@import "tailwindcss";
+@import "@heroui/styles";
+@import "@fortawesome/fontawesome-free/css/all.min.css";
+
+@source "../**/*.{js,ts,jsx,tsx}";
+
+/* ─── Savant palette (10 hex + white) ────────────────────────────────────
+   User-provided colors (CSV):
+     51dfe5, 070f1b, 467b8b, ccf4f7, 395464, 11293c, 56b6c5, 9bf1f4, 16fcef
+   Plus: #ffffff (white).
+   Mapped to HeroUI v3 design tokens (OKLCH, exact — no approximations).
+   ──────────────────────────────────────────────────────────────────────── */
+
+:root {
+  color-scheme: dark light;
+
+  /* Surfaces — dark to light */
+  --background:        oklch(16.719% 0.02843 257.531);  /* #070f1b */
+  --surface:           oklch(27.169% 0.04651 244.633);  /* #11293c */
+  --surface-secondary: oklch(43.096% 0.04193 235.065);  /* #395464 */
+  --surface-tertiary:  oklch(55.239% 0.06163 219.419);  /* #467b8b */
+  --border:            oklch(43.096% 0.04193 235.065);  /* #395464 */
+
+  /* Text */
+  --foreground:        oklch(93.986% 0.04142 202.066);  /* #ccf4f7 */
+  --muted:             oklch(72.425% 0.09241 208.980);  /* #56b6c5 */
+
+  /* Accent — bright cyan, neon hover */
+  --accent:            oklch(83.080% 0.11974 199.126);  /* #51dfe5 */
+  --accent-hover:      oklch(89.396% 0.15355 188.099);  /* #16fcef */
+  --accent-foreground: oklch(16.719% 0.02843 257.531);  /* #070f1b on accent */
+
+  /* Status — no green in palette, using neon cyan as success */
+  --success:           oklch(89.396% 0.15355 188.099);  /* #16fcef */
+  --success-foreground: oklch(16.719% 0.02843 257.531);
+}
+
+[data-theme="light"] {
+  /* Inverted lightness, same hue family. Accent is darker
+     (teal #467b8b) for AA contrast against the pale surfaces. */
+  --background:        oklch(100.000% 0.00000 89.876);  /* #ffffff */
+  --surface:           oklch(93.986% 0.04142 202.066);  /* #ccf4f7 */
+  --surface-secondary: oklch(90.471% 0.08314 198.608);  /* #9bf1f4 */
+  --surface-tertiary:  oklch(72.425% 0.09241 208.980);  /* #56b6c5 */
+  --border:            oklch(83.080% 0.11974 199.126);  /* #51dfe5 */
+
+  --foreground:        oklch(27.169% 0.04651 244.633);  /* #11293c */
+  --muted:             oklch(43.096% 0.04193 235.065);  /* #395464 */
+
+  --accent:            oklch(55.239% 0.06163 219.419);  /* #467b8b */
+  --accent-hover:      oklch(43.096% 0.04193 235.065);  /* #395464 */
+  --accent-foreground: oklch(100.000% 0.00000 89.876);  /* #ffffff */
+
+  --success:           oklch(55.239% 0.06163 219.419);  /* #467b8b */
+  --success-foreground: oklch(100.000% 0.00000 89.876);
+}

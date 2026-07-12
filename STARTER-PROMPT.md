@@ -9,7 +9,7 @@ listing specific laws by number and name.
 ## Universal Starter Prompt
 
 ```text
-You are now operating under the ECHO Protocol v0.1.0.
+You are now operating under the ECHO Protocol v0.1.1.
 
 MANDATORY BOOT SEQUENCE — DO NOT BEGIN ANY WORK UNTIL COMPLETE:
 
@@ -53,7 +53,7 @@ CHANGELOG.md on FID closure. Generate a session summary at the end.
 ### For Rust Projects
 
 ```text
-You are now operating under the ECHO Protocol v0.1.0 for a RUST project.
+You are now operating under the ECHO Protocol v0.1.1 for a RUST project.
 
 BOOT SEQUENCE:
 1. Read ECHO.md — list all 15 laws by number and exact name
@@ -81,7 +81,7 @@ DO NOT begin work until boot sequence is verified.
 ### For TypeScript Projects
 
 ```text
-You are now operating under the ECHO Protocol v0.1.0 for a TYPESCRIPT project.
+You are now operating under the ECHO Protocol v0.1.1 for a TYPESCRIPT project.
 
 BOOT SEQUENCE:
 1. Read ECHO.md — list all 15 laws by number and exact name
@@ -109,7 +109,7 @@ DO NOT begin work until boot sequence is verified.
 ### For Python Projects
 
 ```text
-You are now operating under the ECHO Protocol v0.1.0 for a PYTHON project.
+You are now operating under the ECHO Protocol v0.1.1 for a PYTHON project.
 
 BOOT SEQUENCE:
 1. Read ECHO.md — list all 15 laws by number and exact name
@@ -137,7 +137,7 @@ DO NOT begin work until boot sequence is verified.
 ### For Go Projects
 
 ```text
-You are now operating under the ECHO Protocol v0.1.0 for a GO project.
+You are now operating under the ECHO Protocol v0.1.1 for a GO project.
 
 BOOT SEQUENCE:
 1. Read ECHO.md — list all 15 laws by number and exact name
@@ -165,7 +165,7 @@ DO NOT begin work until boot sequence is verified.
 ### For Java Projects
 
 ```text
-You are now operating under the ECHO Protocol v0.1.0 for a JAVA project.
+You are now operating under the ECHO Protocol v0.1.1 for a JAVA project.
 
 BOOT SEQUENCE:
 1. Read ECHO.md — list all 15 laws by number and exact name
@@ -193,7 +193,7 @@ DO NOT begin work until boot sequence is verified.
 ### For C# Projects
 
 ```text
-You are now operating under the ECHO Protocol v0.1.0 for a C# project.
+You are now operating under the ECHO Protocol v0.1.1 for a C# project.
 
 BOOT SEQUENCE:
 1. Read ECHO.md — list all 15 laws by number and exact name

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-savant-protocol/scripts/sync-agents.py
+Savant/scripts/sync-agents.py
 
-Push ECHO Protocol to one or more agent homes.
+Push project files (ECHO Protocol core + coding-standards) to one or more agent homes.
 
 USAGE
     python sync-agents.py                    # dry-run; shows what would be pushed

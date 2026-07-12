@@ -8,11 +8,11 @@
 project:
   name: "savant-core"
   description: "Tauri 2 + React 19 + HeroUI v3 alpha desktop app — proactive AI assistant. Phase 1 in flight."
-  version: "0.0.1"
+  version: "0.0.2"
 
 protocol:
   version: "0.1.1"
-  strict_mode: true  # true = all 15 laws active (default), false = core 4 laws only
+  strict_mode: true # true = all 15 laws active (default), false = core 4 laws only
 
 language: "rust"
 
@@ -74,4 +74,4 @@ session:
   auto_summary: true
   summary_interval: 30
   max_session_hours: 4
-  autonomy_level: 3  # 1=Guided, 2=Supervised, 3=Autonomous (default)
+  autonomy_level: 3 # 1=Guided, 2=Supervised, 3=Autonomous (default)

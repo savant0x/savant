@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Savant Core",
@@ -11,8 +12,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="bg-background text-foreground">{children}</body>
+    <html lang="en" className="h-full" data-theme="dark">
+      <body className="h-full bg-background text-foreground antialiased">
+        {children}
+      </body>
     </html>
   );
 }

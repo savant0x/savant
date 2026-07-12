@@ -1,29 +1,38 @@
 #!/usr/bin/env python3
 """
-savant-protocol/scripts/release.py
+Savant/scripts/release.py
 
 One-command release: tag -> push -> create GitHub release with changelog notes.
 
 USAGE
-    python scripts/release.py                    # Release current VERSION
-    python scripts/release.py 0.1.3              # Release specific version
+    python scripts/release.py                    # Release current VERSION (default: savant0x/Savant)
+    python scripts/release.py 0.0.2              # Release specific version
     python scripts/release.py --dry-run          # Show what would happen
     python scripts/release.py --update           # Update existing release notes
     python scripts/release.py --skip-tag         # Don't create/push a tag (already exists)
+    python scripts/release.py --repo OWNER/REPO  # Override target GitHub repo slug
     python scripts/release.py --help             # Show usage
 
 WHAT IT DOES
     1. Validate working tree is clean
     2. Validate VERSION file
     3. Extract release notes for this version from CHANGELOG.md
-    4. Create + push git tag (unless --skip-tag)
-    5. Create or update GitHub release via the REST API
+    4. Resolve target REPO_SLUG (default: savant0x/Savant; --repo override)
+    5. Create + push git tag (unless --skip-tag; uses git origin, not REPO_SLUG)
+    6. Create or update GitHub release on REPO_SLUG via the REST API
 
 REQUIREMENTS
     - git on PATH
     - GitHub token accessible via the git credential helper
-      (savant-trading and savant-protocol both use the standard Git Credential Manager)
+      (standard Git Credential Manager on Windows/macOS)
     - No additional packages (stdlib only)
+
+NOTE — REPO_SLUG default
+    The default REPO_SLUG is `savant0x/Savant` (this project's GitHub repo as of the
+    boilerplate→project separation in 2026). Earlier releases of this script had the
+    hardcoded value `fame0528/savant-protocol`, which pointed at the boilerplate
+    upstream rather than the actual project. Use --repo to override for forks or
+    release-from-fork workflows.
 """
 
 import argparse
@@ -42,7 +51,8 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 PROTOCOL_ROOT = Path(__file__).resolve().parent.parent
-REPO_SLUG = "fame0528/savant-protocol"
+DEFAULT_REPO_SLUG = "savant0x/Savant"  # Savant project (this repo); --repo overrides at runtime
+REPO_SLUG = DEFAULT_REPO_SLUG  # mutated to args.repo at end of main() — module-global for helper-function access
 API_BASE = "https://api.github.com"
 
 
@@ -255,11 +265,22 @@ def get_release_id(version: str, token: str) -> int | None:
 # ── Main ────────────────────────────────────────────────────────────
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("version", nargs="?", help="New version number (e.g. 0.1.3). Defaults to VERSION file.")
+    ap.add_argument("version", nargs="?", help="New version number (e.g. 0.0.2). Defaults to VERSION file.")
     ap.add_argument("--dry-run", action="store_true", help="Show what would happen without executing")
     ap.add_argument("--update", action="store_true", help="Update notes on an existing release (no tag changes)")
     ap.add_argument("--skip-tag", action="store_true", help="Don't create/push a git tag")
+    ap.add_argument(
+        "--repo",
+        default=DEFAULT_REPO_SLUG,
+        help=f"GitHub repo slug for the GitHub Release API call (default: {DEFAULT_REPO_SLUG}). git tag push still goes to the local remote (origin).",
+    )
     args = ap.parse_args()
+
+    # Resolve target REPO_SLUG at runtime (after parse_args so --repo override is honored).
+    # Helpers reference the module-global REPO_SLUG — mutate here so all downstream
+    # strings (URLs, dry-run messages, release-created ok-message) use the chosen slug.
+    global REPO_SLUG
+    REPO_SLUG = args.repo
 
     current_version = read_version()
     version = args.version or current_version

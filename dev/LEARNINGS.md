@@ -1,24 +1,32 @@
 # LEARNINGS
 
-## Session YYYY-MM-DD-HHMM: [Session Name]
+## Session 2026-07-12-1830: Housekeeping Pass + FID-0003 Loop 0 Doc Convergence Note
 
 **Key Learnings:**
 
-- [What worked well]
-- [What caused issues]
-- [What to improve]
+- **Mock IPC realness principle** — call real upstream APIs from mock IPC to validate inputs at the source. Saved a class of master-key-vs-chat-completion confusion in FID-0003 (HTTP 401 `User not found` was actually a flat-master-key-on-Authorization issue, not a chat-completion issue). The schema probe alone (`POST /v1/keys` with the user's master) confirmed master validity at the source.
+- **Tier-invariance capture** — master-can't-cross-IPC-to-HTTP should be codified in `coding-standards/typescript.md` so future contributors don't repeat the collapse that FID-0003 fixed (browser `localStorage` was holding master bytes that chat used verbatim as `Authorization: Bearer ${master}`).
+- **Pre-impl probes are gates, not gates-after-impl** — CORS pre-flight + schema probe both ran BEFORE any code change. Confirmed 5 architectural misconceptions in the FID body without touching code: `hash` (not `id`) is the DELETE path-segment; `include_byok_in_limit` (not `include_byok_keys`); `data.label` is server-controlled (request-body label ignored); `key` is at top-level of envelope (NOT inside `data`); `clear_session_key` IPC needs `{hash}` (NOT just `{name}`).
+- **Versions rock ONLY at release time** — `package.json` is canonical (last-RELEASED version). Project meta-files (`VERSION`, `protocol.config.yaml` `project.version`, `README.md` headline + §Versioning rule, the most recent RELEASED `CHANGELOG.md` entry) MUST mirror `package.json`. **Never bump these files speculatively mid-development**, regardless of how much code work has accumulated — work-in-progress lives under `## [Unreleased]` in `CHANGELOG.md` and gets tagged with a version header at release time. Each release is one patch-digit bump (10-patch-per-minor rule applies). The `protocol.version` axis (`protocol.config.yaml`) is independent (ECHO Protocol releases separately from the Savant project). *(Codified 2026-07-12 after Spencer flagged the previous housekeeping pass's speculative bump `0.0.1 → 0.1.4` across 4 anchors as the "speed through versions" anti-pattern; meta-files reverted to match `package.json=0.0.1` and the captured work moved into a `## [Unreleased]` section in `CHANGELOG.md` awaiting the actual v0.0.2 release. Cross-referenced from `CHANGELOG.md` intro paragraph and `README.md` §Versioning rule.)*
+- **Round-numbering ambiguity** — when sub-bullets reference "code-reviewer round N", the number drifts across non-obvious counters. Convention: descriptive pass names ("the NEEDS-FIX pass") rather than counters.
+- **FID-doc Perfection Loop discipline (Loop-0-before-approval)** — FID-doc Perfection Loop (Loop 0) happens BEFORE approval, NOT during implementation. Once the plan is approved and status is `analyzed` (with the fix phase still pending), the implementation runs against the plan as written — no iteration on the FID body during code work. *(Status-name hygiene: `analyzed` means plan-loop complete + awaiting implementation; `fixed` means implementation code has been applied; `verified` means Acceptance Criteria gates passed. Don't conflate "plan approval" with "code completion".)* Mid-impl discoveries spawn a NEW FID (or amendment), not a stealth plan-loop iteration. This locks the plan as the source of truth for the fix phase and prevents rework thrash. *(Codified 2026-07-12 after two related agent framing mistakes during FID-0003's v3.8 status advance: (1) suggesting "begin fid-0003 loop 1" implied mid-impl FID iteration; (2) advancing the FID status `analyzed → fixed` on plan sign-off rather than on implementation completion — corrected back to `analyzed` per Spencer; cross-referenced from `dev/fids/0003-auto-derived-session-key.md` §Status footer "Plan approval captured" narrative.)*
 
 **Agent Behavior:**
 
-- [What the agent did well]
-- [What the agent struggled with]
-- [Process improvements discovered]
+- **Per-FID-as-doc Perfection Loop (Loop 0) is high-leverage** — FID-0003 went through 7 iters of Loop 0 (audit/history on the FID itself, not the code) and caught 36 issues before any code touched (16 in v1→v2, 5 in v2→v3, 5 in v3→v3.5, 4 polish + 6 in v3.5→v3.7). Loop 1 (RED → GREEN → AUDIT on code) remains, but the doc reached ECHO-compliant convergence first.
+- **Honoring user-stated intent over ECHO-strict headers** — when FID-0001 said `closed` in header but `verified` in §Status body, user-stated intent ("they're closed; just move them") was honored by reconciling body → header + archiving. Strict ECHO would have required a follow-up audit first; user-aligned housekeeping reconciled forward. Document the reconciliation in the FID body so the audit trail remains intact.
+- **`.savant` mirror-of-`.vera` pattern** — both files are agent home pointers with absolute paths. When `.vera` exists for the Vera agent, `.savant` should exist for the Savant agent pointing at the operator's local install. Stale path (pointing to `Savant-backup`) was the cause of one bug class: agents reading `.savant` would look for code in the wrong tree.
+- **FID auto-archive is structural; not optional** — `dev/fids/` should hold ONLY `analyzed` (live) or `verified` (mid-process) FIDs; closed FIDs MUST live in `dev/fids/archive/`. Pre-housekeeping drift was 2 FIDs in wrong location.
 
 **Technical Insights:**
 
-- [Code patterns discovered]
-- [Anti-patterns found]
-- [Performance insights]
+- **OpenRouter `/v1/keys` envelope shape** (verified live 2026-07-12 00:55, HTTP 201 in 0.259s): 20 fields in `data` + top-level `key`. Schema-quirk observations: `data.hash` (64-char hex, NOT `id`) is the DELETE path-segment; `data.label` is `<key-prefix>…<key-suffix>` (always, server-set regardless of request-body label — security feature); `include_byok_in_limit: false` (NOT `include_byok_keys`) scopes subkey to provisioned-only inference contexts. Full schema documented in `dev/fids/0003-auto-derived-session-key.md` §OpenRouter `/v1/keys` Schema (verified live 2026-07-12 00:55).
+- **CORS wildcards + auth gating** — OpenRouter returns `Access-Control-Allow-Origin: *` for `/v1/keys` from `localhost:3000`; wildcard opens browser wiring, but `Authorization: Bearer <master>` is the actual auth gate. Browser-preview path viable for v1; Tauri Rust OS-keychain migration (Phase 5) addresses the v1-residual Threat Model item 1 (master temporarily crosses IPC-to-HTTP bare on `POST /v1/keys`).
+- **`storage` event listener mitigates cross-tab localStorage drift** — tab A's `LS_DERIVED` write does not auto-propagate to tab B; without `window.addEventListener('storage', ...)`, two-tab UX has stale Session until refresh. Wired in §Steps step 9 of FID-0003.
+- **`randomHex(n)` via `crypto.getRandomValues`** is the pattern for OpenRouter `agent_name` uniqueness (must be unique per Save + per Rotate, since OpenRouter rejects duplicate names). Inlined at `src/lib/ids.ts` per FID-0003 Step 1.
+- **Schema `[UNVERIFIED-TBD]` discipline** — even well-known public APIs deserve a verification probe before citing exact field shapes. New convention: every FID that cites a public API must include `[UNVERIFIED-TBD]` markers that get replaced by live-probe paste-back before Loop 1 RED. Strengthens ECHO §FID-151 from "cite a path" to "cite a path AND a probe".
 
 ---
+
 <!-- Add new entries above this line -->
+

@@ -70,7 +70,7 @@ project:
   description: "Your project description"
   version: "your-project-version"
 
-language: "rust"  # rust | typescript | python | go | java | csharp
+language: "rust" # rust | typescript | python | go | java | csharp
 
 commands:
   build: "your-build-command"

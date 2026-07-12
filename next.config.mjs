@@ -11,6 +11,10 @@ const nextConfig = {
   outputFileTracingRoot: process.cwd(),
   // Trailing-slash routes are conventional for Tauri static loading.
   trailingSlash: true,
+  // Hide the Next.js dev indicator (the small badge in the bottom-right
+  // corner that shows the route and build status). The Sovereign navbar
+  // is the only chrome we want in the renderer.
+  devIndicators: false,
 };
 
 export default nextConfig;
