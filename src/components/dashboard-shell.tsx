@@ -96,6 +96,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const [profiles, setProfiles] = useState<ProfileSummary[]>([]);
   const [theme, setTheme] = useState<Theme>("dark");
   const [collapsed, setCollapsed] = useState(false);
+  // Right Inspector — independent fold state. Same chevron-toggle
+  // convention as the left rail (240px ↔ 64px → 320px ↔ 48px).
+  // Persisted per-mount only; resets on refresh to match the left rail.
+  const [rightCollapsed, setRightCollapsed] = useState(false);
 
   useEffect(() => {
     const current = (document.documentElement.dataset.theme as Theme) || "dark";
@@ -151,9 +155,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     <div
       className="grid h-screen w-screen overflow-hidden bg-background text-foreground transition-[grid-template-columns] duration-300 ease-out"
       style={{
-        gridTemplateColumns: collapsed
-          ? "64px minmax(0, 1fr) 320px"
-          : "240px minmax(0, 1fr) 320px",
+        gridTemplateColumns: (() => {
+          const left = collapsed ? "64px" : "240px";
+          const right = rightCollapsed ? "48px" : "320px";
+          return `${left} minmax(0, 1fr) ${right}`;
+        })(),
       }}
     >
       {/* ─── Left Rail ─────────────────────────────────────────────── */}
@@ -242,7 +248,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                       "group relative flex items-center gap-3 rounded-md px-3 py-2 font-mono text-[11px] uppercase tracking-[0.15em] transition-all duration-200 no-underline",
                       collapsed ? "justify-center" : "justify-start",
                       active
-                        ? "border-r-2 border-accent bg-accent/10 text-accent"
+                        ? "border-r-2 border-accent bg-accent/10 text-accent shadow-[inset_4px_0_8px_-4px_var(--accent)]"
                         : "border-r-2 border-transparent text-muted hover:bg-surface-secondary/40 hover:text-foreground",
                     ].join(" ")}
                   >
@@ -343,45 +349,109 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       </main>
 
       {/* ─── Right Inspector ───────────────────────────────────────── */}
-      <aside className="flex flex-col overflow-auto border-l border-default/60 bg-surface/30">
-        <header className="border-b border-default/60 p-4">
-          <p className="font-mono text-[9px] uppercase tracking-[0.3em] text-muted">
-            Inspector
-          </p>
-        </header>
-        <Separator />
-        <section className="p-4">
-          <h3 className="mb-3 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-            Vault
-          </h3>
-          {vaultError ? (
-            <p
-              className="text-sm text-danger"
-              title={vaultError}
-              data-testid="vault-error"
-            >
-              Failed to load vault: {vaultError.slice(0, 80)}
-            </p>
-          ) : profiles.length === 0 ? (
-            <p className="text-sm text-muted">No profiles configured.</p>
+      <aside
+        className={
+          rightCollapsed
+            ? "relative flex flex-col items-center border-l border-default/60 bg-gradient-to-b from-surface/30 to-surface/10"
+            : "relative flex flex-col overflow-auto border-l border-default/60 bg-gradient-to-b from-surface/40 to-surface/20"
+        }
+      >
+        <header className="flex w-full items-center justify-center border-b border-default/60 p-4">
+          {rightCollapsed ? (
+            <i
+              className="fas fa-magnifying-glass-chart text-base text-muted"
+              aria-hidden
+              title="Inspector"
+            />
           ) : (
-            <ul className="flex flex-col gap-2">
-              {profiles.map((p) => (
-                <li key={p.name} className="text-sm">
-                  <span className="font-medium">{p.provider}</span>
-                  <span className="text-muted"> · {p.method}</span>
-                </li>
-              ))}
-            </ul>
+            <p className="font-mono text-[9px] uppercase tracking-[0.3em] text-muted">
+              Inspector
+            </p>
           )}
-        </section>
-        <Separator />
-        <section className="p-4">
-          <h3 className="mb-3 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-            Activity
-          </h3>
-          <p className="text-sm text-muted">No recent activity.</p>
-        </section>
+        </header>
+        {!rightCollapsed && <Separator />}
+        {!rightCollapsed && (
+          <>
+            <section className="p-4">
+              <h3 className="mb-3 flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+                <i
+                  className="fas fa-vault text-[10px] text-accent"
+                  aria-hidden
+                />
+                Vault
+              </h3>
+              {vaultError ? (
+                <p
+                  className="text-sm text-danger"
+                  title={vaultError}
+                  data-testid="vault-error"
+                >
+                  Failed to load vault: {vaultError.slice(0, 80)}
+                </p>
+              ) : profiles.length === 0 ? (
+                <p className="flex items-center gap-2 text-sm text-muted">
+                  <i className="fas fa-circle-info text-xs" aria-hidden />
+                  No profiles configured.
+                </p>
+              ) : (
+                <ul className="flex flex-col gap-2">
+                  {profiles.map((p) => (
+                    <li
+                      key={p.name}
+                      className="flex items-center gap-2 rounded-md border border-default/30 bg-surface/30 px-2.5 py-1.5 text-sm transition-colors hover:border-accent/40"
+                    >
+                      <span
+                        className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent shadow-[0_0_4px_var(--accent)]"
+                        aria-hidden
+                      />
+                      <span className="font-medium">{p.provider}</span>
+                      <span className="text-muted">· {p.method}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+            <Separator />
+            <section className="p-4">
+              <h3 className="mb-3 flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+                <i
+                  className="fas fa-wave-square text-[10px] text-accent"
+                  aria-hidden
+                />
+                Activity
+              </h3>
+              <p className="flex items-center gap-2 text-sm text-muted">
+                <i className="fas fa-circle-info text-xs" aria-hidden />
+                No recent activity.
+              </p>
+            </section>
+          </>
+        )}
+        {rightCollapsed && (
+          <div className="flex flex-1 flex-col items-center justify-end gap-3 p-3">
+            <span
+              className="h-2 w-2 rounded-full bg-success shadow-[0_0_6px_var(--success)]"
+              title="System online"
+              aria-label="System online"
+            />
+          </div>
+        )}
+
+        {/* Fold toggle — middle of the left edge (mirror of left rail).
+            Toggles the 320px ↔ 48px collapse; same icon convention. */}
+        <button
+          onClick={() => setRightCollapsed((c) => !c)}
+          aria-label={
+            rightCollapsed ? "Expand inspector" : "Collapse inspector"
+          }
+          title={rightCollapsed ? "Expand inspector" : "Collapse inspector"}
+          className="absolute top-1/2 -left-3 z-20 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md border border-default/60 bg-surface text-muted shadow-md transition-all duration-200 hover:scale-110 hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          <i
+            className={`${rightCollapsed ? "fa-chevron-left" : "fa-chevron-right"} fas text-sm`}
+            aria-hidden
+          />
+        </button>
       </aside>
     </div>
   );

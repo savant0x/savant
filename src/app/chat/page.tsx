@@ -295,14 +295,28 @@ export default function ChatPage() {
                   key={m.id}
                   className={
                     m.role === "user"
-                      ? "ml-auto max-w-[80%] rounded-md border border-default/40 bg-surface/40 px-4 py-3"
-                      : "mr-auto max-w-[80%] rounded-md border border-accent/40 bg-accent/5 px-4 py-3"
+                      ? "ml-auto max-w-[80%] rounded-md border border-default/40 bg-gradient-to-br from-surface/50 to-surface/30 px-4 py-3 transition-all duration-200 hover:border-default/60"
+                      : "mr-auto max-w-[80%] rounded-md border border-accent/40 bg-gradient-to-br from-accent/10 to-accent/5 px-4 py-3 shadow-[0_0_12px_-8px_var(--accent)] transition-all duration-200 hover:border-accent/60"
                   }
                 >
                   <div className="mb-1.5 flex items-center justify-between gap-2">
-                    <span className="font-mono text-[9px] font-semibold uppercase tracking-[0.25em] text-muted">
-                      {m.role === "user" ? "You" : "Savant"}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {m.role === "assistant" && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src="/img/logo.png"
+                          alt=""
+                          className="h-3.5 w-3.5 shrink-0 rounded-sm object-contain"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                          aria-hidden
+                        />
+                      )}
+                      <span className="font-mono text-[9px] font-semibold uppercase tracking-[0.25em] text-muted">
+                        {m.role === "user" ? "You" : "Savant"}
+                      </span>
+                    </div>
                     <span
                       className="font-mono text-[9px] uppercase tracking-[0.25em] text-muted"
                       title={new Date(m.ts).toISOString()}
@@ -316,13 +330,40 @@ export default function ChatPage() {
                 </li>
               ))}
               {sending && (
-                <li className="mr-auto max-w-[80%] rounded-md border border-accent/40 bg-accent/5 px-4 py-3">
-                  <p className="mb-1.5 font-mono text-[9px] font-semibold uppercase tracking-[0.25em] text-muted">
-                    Savant
-                  </p>
-                  <p className="font-mono text-sm text-muted">
-                    <span className="animate-pulse">▍</span>
-                  </p>
+                <li className="mr-auto max-w-[80%] rounded-md border border-accent/40 bg-gradient-to-br from-accent/10 to-accent/5 px-4 py-3 shadow-[0_0_12px_-6px_var(--accent)] transition-all duration-200">
+                  <div className="mb-1.5 flex items-center gap-1.5">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/img/logo.png"
+                      alt=""
+                      className="h-3.5 w-3.5 shrink-0 rounded-sm object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
+                      aria-hidden
+                    />
+                    <span className="font-mono text-[9px] font-semibold uppercase tracking-[0.25em] text-muted">
+                      Savant
+                    </span>
+                  </div>
+                  <div
+                    className="flex items-center gap-1.5"
+                    role="status"
+                    aria-label="Savant is thinking"
+                  >
+                    <span
+                      className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent"
+                      style={{ animationDelay: "0ms" }}
+                    />
+                    <span
+                      className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent"
+                      style={{ animationDelay: "150ms" }}
+                    />
+                    <span
+                      className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent"
+                      style={{ animationDelay: "300ms" }}
+                    />
+                  </div>
                 </li>
               )}
             </ul>
