@@ -3,9 +3,9 @@
 
 <img src="img/savant.png" alt="Savant Logo" width="180" />
 
-**Sovereign agent substrate. Phase 1: Renderer-first.**
+**Sovereign agent substrate. Phase 1: Renderer-first with Rust core restored.**
 
-A desktop-resident proactive AI shell built on Next.js 15, Tauri 2, and Rust. Currently in a renderer-first MVP rebuild focusing on secure credential architecture, IPC interfaces, and LLM manifestation tooling.
+A desktop-resident proactive AI shell built on Next.js 15, Tauri 2, and Rust. The 22-member cargo workspace is on disk and mechanically verified; the inner monologue subsystem is wired through the Tauri IPC for end-to-end reflection streaming.
 
 </div>
 
@@ -13,25 +13,18 @@ A desktop-resident proactive AI shell built on Next.js 15, Tauri 2, and Rust. Cu
 
 ## What's New in v0.0.4
 
-**Rust cognitive core restored (FID-016), `src-tauri` lib renamed for build hygiene (FID-016r2), Reflections Viewer MVP with full CommonMark+GFM Markdown (FID-017 + §Perfection Loop 5 markdown swap), License forward-effective MIT → Apache 2.0.**
+- **Rust cognitive core restored (FID-016).** 22-member cargo workspace (`Savant/Cargo.toml`) — 21 savant-orig crates (`core, gateway, agent, skills, mcp, channels, canvas, cognitive, ipc, memory, dream, panopticon, obsidian, integrations, security, sandbox, echo, browser, toolforge, generation, schema`) + `lib/cortexadb/` (5.2M / 22,816 LOC). `cargo check --workspace` 0/0; `cargo build --workspace` 0/0.
+- **`src-tauri` lib renamed (FID-016r2, SUB-FID of FID-016).** `[lib] name "savant_shell"` to disambiguate from `crates/core`'s `savant_core` (savant-orig identity, preserved verbatim). 4-file surgical edit. Closes 3 cargo filename-collision warnings from FID-016 AUDIT.
+- **Reflections Viewer MVP (FID-017).** 5 Tauri commands (`start_consciousness` / `stop_consciousness` / `get_consciousness_state` / `trigger_reflection` / `initialize_app_state`) wire the savant-orig inner monologue subsystem to the Next.js dashboard at `/reflections`. 19-entry `LENSES` array ported from [`crates/agent/src/pulse/prompts.rs:147`](crates/agent/src/pulse/prompts.rs#L147) to [`src/lib/reflections/lenses.ts`](src/lib/reflections/lenses.ts). Markdown renderer swap from the hand-rolled `src/lib/markdown-lite.tsx` (~280 lines, only h1-h3 / `**bold**` / `*italic*` / `> blockquote` / `---` hr / HTML entities, deleted in FID-017) to `react-markdown@^10.1.0` + `remark-gfm@^4.0.1` (full CommonMark + GFM: nested lists, fenced code, tables, task lists, strikethrough, autolinks, all heading levels, hard line breaks, escape sequences).
+- **License forward-effective MIT → Apache 2.0.** Apache 2.0 applies to v0.0.4 forward; v0.0.3 and earlier remain MIT. Adds patent grant + retaliation clause.
 
-- **Rust cognitive core restored (FID-016)** — `Savant/` now contains the full savant-orig Rust workspace as a 22-member cargo workspace: 21 crates (`core, gateway, agent, skills, mcp, channels, canvas, cognitive, ipc, memory, dream, panopticon, obsidian, integrations, security, sandbox, echo, browser, toolforge, generation, schema`; ~566M / 121K LOC) + `lib/cortexadb/` (5.2M / 22,816 LOC) + 4 root configs (`Cargo.lock`, `clippy.toml`, `rustfmt.toml`, `deny.toml`) copied from `Savant-backup/`. `cargo check --workspace` (3:23, 0 errors, 0 warnings) + `cargo build --workspace` (6:32, 0 errors, 3 filename-collision warnings closed by FID-016r2 below). 0 hard stubs across the 21 crates — the savant-orig "no AI slop" discipline is mechanically verified. **This is the foundation for FID-017+ per-subsystem wiring** (memory browser, skills marketplace, MCP config, etc.).
-- **`src-tauri` lib renamed for build hygiene (FID-016r2 — SUB-FID of FID-016)** — `src-tauri/Cargo.toml:12` `[lib] name = "savant_core"` → `"savant_shell"` to disambiguate from `crates/core`'s `package.name = "savant_core"` (savant-orig identity, preserved verbatim). 5 use-site edits across 4 files (`src-tauri/Cargo.toml:12` + `src-tauri/src/main.rs:5` + `src-tauri/tests/master_key_test.rs:3` + `src-tauri/tests/inference_smoke_test.rs:9-10`). Closes the 3 filename-collision warnings from FID-016 AUDIT phase — verified 0 warnings + 0 errors at v0.0.4 final gate run. Cross-ref [CHANGELOG.md](CHANGELOG.md) `## v0.0.4 — 2026-07-13` §Fixed entry + [dev/fids/archive/FID-2026-07-13-016r2-savant-shell-rename.md](dev/fids/archive/FID-2026-07-13-016r2-savant-shell-rename.md) for the formal sub-FID doc.
-- **Reflections Viewer MVP (FID-017)** — `/reflections` page wires the savant-orig inner monologue subsystem (12-lens rotation + consciousness state machine + learning pipeline) to the Next.js dashboard. 5 new Tauri commands (`start_consciousness` / `stop_consciousness` / `get_consciousness_state` / `trigger_reflection` / `initialize_app_state`) + `AppState` struct (`workspace_path` + `state_handle Arc<AtomicU8>` + `lens_index Mutex<usize>` + daemon lifecycle `JoinHandle + CancellationToken` + `daemon_state` consciousness mirror); 19-entry `LENSES` ported verbatim from [`crates/agent/src/pulse/prompts.rs:147`] to [`src/lib/reflections/lenses.ts`] (no design changes per LESSON-018); 2 React hooks (selector-style `use-lens-rotation` + boot-time `use-reflections` with Tauri-runtime SOUL.md fetch guarded by `if ("__TAURI_INTERNALS__" in window)`); journal-style REFLECTIONS.md format `## [YYYY-MM-DD HH:MM:SS UTC] [BODY]` with NO per-entry `[LENS]` tag — single unified stream per Spencer 2026-07-13: *"all lenses are supposed to be a single stream, not separated by lenses but all joined together"*. Flat-bordered card design (`rounded-none border border-default/30 px-5 py-4`) with new `formatFullTimestamp` headers.
-- **Markdown renderer swap (FID-017 §Perfection Loop 5)** — hand-rolled `MarkdownLite` ([`src/lib/markdown-lite.tsx`], ~280 lines covering only h1-h3 / `**bold**` / `*italic*` / `> blockquote` / `---` hr / HTML entities) replaced with `react-markdown@^10.1.0` + `remark-gfm@^4.0.1` for full CommonMark + GFM coverage (lists with nesting; fenced code blocks; tables; task lists; strikethrough; autolinks; all heading levels; hard line breaks; escape sequences). Custom `a` component opens external `http(s)` links in new tabs with `rel="noopener noreferrer"`. XSS-safe by construction (no `dangerouslySetInnerHTML`; ref-based AST traversal → React elements).
-- **MIT → Apache 2.0 license migration (forward-effective)** — `LICENSE` is now Apache 2.0 going forward; v0.0.3 and earlier releases remain under their original MIT license. Adds explicit patent grant + retaliation clause (per `workspace-savant/SOUL.md` AAA substrate's "Zero-Trust" + "Sovereign-Autonomy" laws). Aligns with Tauri 2's dual-license (MIT/Apache-2.0). `NOTICE` file carries attribution chain (Tauri, React, HeroUI, Next.js, Rust, build/test tooling) + the 2026-07-13 boilerplate-separation note.
-
-See [CHANGELOG.md](CHANGELOG.md) for the complete v0.0.4 entry.
-
-**5 ECHO Quality Gates Verified Green at v0.0.4 Cut:** `cargo build --workspace` exit 0 (2:05, 0 warnings, 0 errors); `cargo check --workspace` exit 0 (2:18, 0 warnings); `npx tsc --noEmit` exit 0; `npm run build` exit 0 (17/17 static-export routes, `/reflections` 46.2 kB post-markdown-swap); `npx prettier --check` exit 0. v0.0.4 is mechanically ready for the release tag — once the prep commits land, run `python scripts/release.py 0.0.4 --dry-run` to validate CHANGELOG parses cleanly, then `python scripts/release.py 0.0.4` to publish the GitHub Release note + push tag `v0.0.4`.
-
-**License Apache 2.0 Forward-Effectivity Recorded at v0.0.4:** the [`LICENSE`](LICENSE) file body remains the canonical Apache 2.0 legal text (unchanged from prior v0.0.3 prep state — the migration was forward-effective across the cut boundary, the LICENSE file itself does not need a content swap). v0.0.3 and earlier releases remain under their original MIT license per the boilerplate→Savant separation discipline of 2026-07-12/13; see [LICENSE](LICENSE) header preamble + [NOTICE](NOTICE) + [CHANGELOG.md](CHANGELOG.md) `## v0.0.4 — 2026-07-13` §Changed entry for the full forward-effectivity record.
+Full release notes in [`CHANGELOG.md`](CHANGELOG.md) `## v0.0.4 — 2026-07-13`. FID scaffold in [`dev/fids/`](dev/fids/).
 
 ---
 
 <div align="center">
 
-[![React](https://img.shields.io/badge/React-19-%23000000?style=flat-square&logo=react&logoColor=%2300fbff)](https://react.dev/)[![Next.js](https://img.shields.io/badge/Next.js-15-%23000000?style=flat-square&logo=nextdotjs&logoColor=%2300fbff)](https://nextjs.org/)[![Tauri](https://img.shields.io/badge/Tauri-2.x-%23000000?style=flat-square&logo=tauri&logoColor=%2300fbff)](https://tauri.app/)[![Rust](https://img.shields.io/badge/Rust-1.86+-%23000000?style=flat-square&logo=rust&logoColor=%2300fbff)](https://www.rust-lang.org/)[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-%23000000?style=flat-square&logo=typescript&logoColor=%2300fbff)](https://www.typescriptlang.org/)[![HeroUI](https://img.shields.io/badge/HeroUI-v3_Alpha-%23000000?style=flat-square&logo=react&logoColor=%2300fbff)](https://heroui.com/)[![License](https://img.shields.io/badge/License-Apache_2.0-%23000000?style=flat-square&logo=github&logoColor=%2300fbff)](LICENSE)[![Status](https://img.shields.io/badge/Status-Phase_1:_In_Flight-%23000000?style=flat-square&color=yellow)](CHANGELOG.md)
+[![React](https://img.shields.io/badge/React-19-%23000000?style=flat-square&logo=react&logoColor=%2300fbff)](https://react.dev/)[![Next.js](https://img.shields.io/badge/Next.js-15-%23000000?style=flat-square&logo=nextdotjs&logoColor=%2300fbff)](https://nextjs.org/)[![Tauri](https://img.shields.io/badge/Tauri-2.x-%23000000?style=flat-square&logo=tauri&logoColor=%2300fbff)](https://tauri.app/)[![Rust](https://img.shields.io/badge/Rust-1.86+-%23000000?style=flat-square&logo=rust&logoColor=%2300fbff)](https://www.rust-lang.org/)[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-%23000000?style=flat-square&logo=typescript&logoColor=%2300fbff)](https://www.typescriptlang.org/)[![HeroUI](https://img.shields.io/badge/HeroUI-v3_Alpha-%23000000?style=flat-square&logo=react&logoColor=%2300fbff)](https://heroui.com/)[![License](https://img.shields.io/badge/License-Apache_2.0-%23000000?style=flat-square&logo=github&logoColor=%2300fbff)](LICENSE)[![Status](https://img.shields.io/badge/Status-v0.0.4_Released-%23000000?style=flat-square&color=brightgreen)](CHANGELOG.md)
 
 </div>
 
@@ -39,93 +32,82 @@ See [CHANGELOG.md](CHANGELOG.md) for the complete v0.0.4 entry.
 
 ## Current State & Live Features
 
-**v0.0.3 ships a focused MVP surface.** The following features are live, tested, and audit-verified:
+v0.0.4 ships the substrate baseline. Renderer is the live surface; the Rust core is on disk and mechanically verified but awaits Phase 2 wiring.
 
-- **Tauri 2 Desktop Shell** — Rust daemon providing OS-level persistent vault and secure OpenRouter inference client. `cargo tauri dev` launches a native window with real Rust IPC; the mock IPC self-disables when `window.__TAURI_INTERNALS__` is set.
-- **Mock-IPC Browser Preview** — Iterate at Phase-1 velocity at `http://localhost:3000` via `@tauri-apps/api/mocks` (installed in `src/lib/mock-ipc.ts`). Master-key vault, derived session subkey, and Soul Builder all work end-to-end without a Tauri host. Fast visual iteration; no Rust rebuild loop.
-- **Soul Manifestation Engine** — LLM-powered builder for zero-hallucination agent configuration writing. The system prompt in `src/lib/soul-generation-system-prompt.ts` leads with a "CRITICAL DIRECTIVE: PROMPT-DRIVEN IDENTITY" section that BANS generic AAA/foundation/sovereign/WAL/CCT language and forces every section to be UNIQUE to the prompt's domain. 18-section AAA Master Framework template.
-- **SSE Streaming** — OpenRouter chunked responses yield `preamble` / `chunk` / `complete` / `error` events. rAF-throttled state updates (50-200 chunks/sec) accumulate in a `useRef` and flush via `requestAnimationFrame` to avoid render thrashing. AbortSignal-aware: the Cancel button stops the in-flight fetch + SSE parser cleanly.
-- **Two-Tier Credential Architecture** — Master key stored in OS app-data vault (`%APPDATA%/savant/auth.json` Windows, `~/.config/savant/auth.json` Unix). Save Master Key fires a chain: vault write → POST `/v1/keys` provision → `LS_DERIVED` write. The "Saved" indicator only flips after BOTH stages succeed. The derived subkey is what chat outbound traffic uses; the master never reaches HTTP.
-- **OpenRouter Inference** — Single provider gateway configured via OS master-key. Two-tier credentials (master + derived subkey) auto-rotated ≥24h. `OPENROUTER_MASTER_KEY` env var takes priority when set (tier 1), vault entry is tier 2. Cross-tab `localStorage` sync via `storage` event listener keeps two-tab UX consistent.
-- **ECHO Protocol Runtime** — 15 Laws + Perfection Loop FSM (RED → GREEN → AUDIT → SELF-CORRECT → COMPLETE) + FID lifecycle (Created → Analyzed → Fixed → Verified → Closed → Archived). All agent work obeys the ECHO discipline; see [ECHO.md](ECHO.md).
-- **TypeScript Strict Mode** — `strict: true` required in `tsconfig.json`. Named exports only, no defaults. `unknown` over `any`. Prefer interface over type for object shapes. 17 unit tests across the `logger.ts` utility (`src/lib/logger.test.ts`) + 5 vitest + 2 Playwright round-trips.
-- **Quality Gates** — `tsc --noEmit` + `prettier --check` + `markdownlint-cli` + `cargo check --workspace` all pass. Quality bar: 300 / 50 / 100 file/function/line caps. Full table in `protocol.config.yaml`.
-
-> **Honest framing:** The Rust cognitive core (Trigger bus, SQLite WAL, dual-loop engine), Swarm Orchestration, 16-provider chain, Mandatory Security Scanner, Distributed Memory Substrate, Two-Tier Agent System, and Channels are **planned for v0.1.0+** — not live in v0.0.3. The v0.0.3 MVP is intentionally narrow: renderer-first, OpenRouter-only, Tauri-shell-with-auth-and-inference. The roadmap below shows the buildout sequence.
+- **Tauri 2 Desktop Shell.** Rust shell providing OS-level persistent vault + secure OpenRouter inference client + the FID-017 reflections IPC. `cargo tauri dev` launches a native window with real Rust IPC; the mock IPC self-disables when `window.__TAURI_INTERNALS__` is set. Cross-platform vault at `%APPDATA%/savant/auth.json` (Windows) / `~/.config/savant/auth.json` (Unix).
+- **Mock-IPC Browser Preview.** Iterate at Phase 1 velocity at `http://localhost:3000` via [`@tauri-apps/api/mocks`](https://www.npmjs.com/package/@tauri-apps/api) (installed in [`src/lib/mock-ipc.ts`](src/lib/mock-ipc.ts)). Master-key vault + Soul Builder + Reflections Viewer all work end-to-end without a Tauri host. Fast visual iteration; no Rust rebuild loop.
+- **Two-Tier Credential Architecture.** Master key in OS app-data vault (5-strategy cascade: env vars → cwd `.env` → exe `.env` → JSON vault → UI prompt). `/v1/keys` provision derives a session subkey the chat outbound traffic uses. The master never reaches HTTP. Auto-rotation ≥24h. Cross-tab `localStorage` sync via `storage` event listener.
+- **OpenRouter Inference.** reqwest-based chat-completions client. Surfaces 401 with active key source (`env` / `vault` / `none`) + key length so the user can identify which tier is the problem.
+- **Soul Manifestation Engine.** LLM-powered builder ([`src/lib/manifest-mock.ts`](src/lib/manifest-mock.ts), [`src/lib/soul-generation-system-prompt.ts`](src/lib/soul-generation-system-prompt.ts)). System prompt leads with a `CRITICAL DIRECTIVE: PROMPT-DRIVEN IDENTITY` section that bans generic AAA/foundation/sovereign/WAL/CCT language and forces every section to be UNIQUE to the prompt's domain. 18-section AAA Master Framework template.
+- **Reflections Viewer.** [`src/app/reflections/page.tsx`](src/app/reflections/page.tsx). Boot-time reader for `workspace-savant/REFLECTIONS.md` + `workspace-savant/SOUL.md` (Tauri-runtime SOUL.md fetch guarded by `if ("__TAURI_INTERNALS__" in window)`). Journal-style parser `split(/(^|\n)##\s+/)`. Streaming indicator + char count + Cancel button. `react-markdown@^10.1.0` + `remark-gfm@^4.0.1` for full CommonMark + GFM.
+- **SSE Streaming.** OpenRouter chunked responses yield `preamble` / `chunk` / `complete` / `error` events. rAF-throttled state updates (50–200 chunks/sec) accumulate in a `useRef` and flush via `requestAnimationFrame`. AbortSignal-aware: the Cancel button stops the in-flight fetch + SSE parser cleanly.
+- **ECHO Protocol Runtime.** 15 Laws + Perfection Loop FSM (RED → GREEN → AUDIT → SELF-CORRECT → COMPLETE) + FID lifecycle (Created → Analyzed → Fixed → Verified → Closed → Archived). All agent work obeys the ECHO discipline; see [`ECHO.md`](ECHO.md).
+- **TypeScript Strict Mode.** `strict: true` required in [`tsconfig.json`](tsconfig.json). Named exports only, no defaults. `unknown` over `any`. 73 vitest unit tests across 7 test files in `src/lib/*.test.ts` + 15 privacy.rs + 4 forensic_capture.rs + 2 Playwright round-trips.
+- **Quality Gates.** `cargo check --workspace` + `cargo build --workspace` + `tsc --noEmit` + `prettier --check` + `markdownlint-cli` all pass. Quality bar (300/50/100 file/function/line caps) in [`protocol.config.yaml`](protocol.config.yaml).
 
 ---
 
 ## Architecture
 
-<div align="center">
-
-<img src="img/architecture.png" alt="Savant Architecture v0.0.3" width="850" />
-
-</div>
-
 ```text
-[ Next.js 15 + React 19 + HeroUI v3 renderer (App Router, static export; LIVE v0.0.3) ] <-- IPC --> [ Tauri 2 Rust daemon (auth + inference; LIVE v0.0.3) ]
-                                                          |
-                                                          +-- master-key vault (auth.json, OS-specific path)
-                                                          +-- OpenRouter client (reqwest, Bearer auth)
-                                                          |
-                                                          |   [ Rust cognitive core — NOT YET BUILT ]
-                                                          +-- - - - Phase 2: trigger bus + hybrid tick
-                                                          +-- - - - Phase 2: SQLite WAL durable state
-                                                          +-- - - - Phase 3+: dual-loop cognitive engine
+
+[ Next.js 15 + React 19 + HeroUI v3 renderer (App Router, static export; LIVE) ]
+                                                                                  |
+                                                                                  v
+                                                                          [ Tauri 2 Rust shell ]    savant_shell::run() at src-tauri/src/lib.rs
+                                                                                  |
+                                                              +-------------------+-------------------+
+                                                              |                   |                   |
+                                                              v                   v                   v
+                                                  master-key vault       OpenRouter client      Reflections IPC (FID-017)
+                                                  (auth.json, OS-sp)     (reqwest, Bearer)       5 commands wire the consciousness
+                                                                                                  state machine to the renderer
+
+  Rust cognitive core — RESTORED ON DISK, mechanically verified (cargo check --workspace 0/0)
+  21 savant-orig crates + lib/cortexadb/ + workspace-savant/SOUL.md anchor
+  Phase 2 wires: trigger bus, SQLite WAL, dual-loop engine, iceoryx2 zero-copy IPC
 ```
 
-The renderer is the live surface and ships the Soul Builder, SSE streaming, and Swarm Deployment diffing. The Tauri 2 daemon provides the master-key vault + OpenRouter inference client as a thin IPC layer over the renderer. The Rust cognitive core (Trigger, State, Cognitive loops) is **not yet built** — the slots below are reserved for follow-on work, not live today.
+The renderer (Next.js App Router, static export) is the live surface. The Tauri 2 Rust shell exposes auth + inference + reflections through typed IPC commands. The 21-crate cognitive core (FID-016 restore) builds clean but its trigger bus / SQLite WAL / dual-loop engine are still Phase 2 wiring — the crates are present on disk, the gates pass, but the runtime has not yet started exercising them.
 
 ---
 
 ## Quick Start
 
-There are two ways to run Savant. Pick the one that matches what you're doing.
-
-### Option A — Browser preview (no Tauri install required, fastest iteration)
+### Option A — Browser preview (no Tauri install)
 
 ```bash
 git clone https://github.com/savant0x/Savant
 cd Savant
-npm install                                # Next.js 15 + React 19 + HeroUI v3 alpha
+npm install
 npm run dev                                # → http://localhost:3000
 ```
 
-Open `http://localhost:3000` in any browser. Tauri IPC is mocked via `@tauri-apps/api/mocks` (installed in `src/lib/mock-ipc.ts`), so the dashboard renders and `MasterKeySetup` + `SoulBuilder` work end-to-end without a Tauri host. Fast visual iteration on the UI; no Rust rebuild loop.
+Tauri IPC is mocked via `src/lib/mock-ipc.ts`. Master key vault + Soul Builder + Reflections Viewer all work end-to-end. Fast iteration; no Rust rebuild loop.
 
 On first launch:
 
-```text
-1. Settings page prompts for your OpenRouter master key
-2. Stored in mock localStorage vault (browser preview only)
-3. Derived session subkey auto-provisioned via OpenRouter /v1/keys
-4. Soul Builder becomes available at /manifest
-```
+1. Settings page prompts for your OpenRouter master key (browser preview uses mock `localStorage` vault).
+2. Derived session subkey auto-provisioned via OpenRouter `/v1/keys`.
+3. `/manifest` builder + `/reflections` viewer become available.
 
-### Option B — Tauri desktop (real Rust IPC, native window)
+### Option B — Tauri desktop (real Rust IPC)
 
 ```bash
 git clone https://github.com/savant0x/Savant
 cd Savant
-cargo install tauri-cli --version "^2.0"   # v2.10.1 verified on Windows 11 dev box
-npm install                                # Next.js 15 + React 19 + HeroUI v3 alpha
-cargo tauri dev                            # launches the desktop window (Next.js dev server on :3000)
+cargo install tauri-cli --version "^2.0"
+npm install
+cargo tauri dev                            # Launches the desktop window (Next.js dev server on :3000)
 ```
 
 On first launch:
 
-```text
-1. MasterKeySetup screen prompts for your OpenRouter API key
-2. Stored in OS app-data vault:
-     Windows: %APPDATA%/savant/auth.json
-     Unix:    ~/.config/savant/auth.json
-3. InferenceSmokeTest screen has a textarea — type anything, click Run
-4. Response from POST https://openrouter.ai/api/v1/chat/completions
-   appears in a HeroUI Card below the input
-```
+1. MasterKeySetup screen prompts for OpenRouter API key → OS app-data vault.
+2. InferenceSmokeTest screen: type, click Run. `POST https://openrouter.ai/api/v1/chat/completions` returns via HeroUI Card.
+3. Reflections page streams from the Rust daemon (5 IPC commands wire the consciousness state machine).
 
-> **Web deployment is not supported.** Savant's renderer is built with `output: "export"` in `next.config.mjs` (required by the Tauri static export at `frontendDist: "../out"` in `tauri.conf.json`). The `/api/env` route is compiled to a static JSON file at build time and cannot read server env vars at runtime in a static export. The two supported paths are the browser preview (Option A, dev server with mocked IPC) and the Tauri desktop (Option B, real Rust IPC). The Tauri app reads the env var server-side via Rust IPC in production, so the env var tier remains functional.
+> Web deployment is unsupported. Renderer is `output: "export"` in [`next.config.mjs`](next.config.mjs) (required by Tauri's `frontendDist: "../out"` in [`src-tauri/tauri.conf.json`](src-tauri/tauri.conf.json)). The `/api/env` route compiles to a static JSON file. Supported paths are browser preview (Option A) and Tauri desktop (Option B). The Tauri app reads env vars server-side via Rust IPC in production.
 
 ---
 
@@ -133,115 +115,136 @@ On first launch:
 
 ```text
 Savant/
-├── Cargo.toml              # Workspace root (single member: src-tauri)
+├── Cargo.toml              # 22-member cargo workspace (src-tauri + 21 savant-orig crates)
+├── Cargo.lock              # Locked dependency graph (~566M / 121K LOC across the 22 members + lib/cortexadb/)
 ├── package.json            # Next.js 15 renderer config + npm scripts
 ├── next.config.mjs         # Next.js config (with ?raw for .md files)
 ├── vitest.config.ts        # Unit test config (happy-dom env)
 ├── playwright.config.ts    # E2E test config (chromium)
 ├── tsconfig.json           # TypeScript strict mode
 ├── LICENSE                 # Apache 2.0 license (full text)
-├── NOTICE                  # Attribution chain (Tauri, React, HeroUI, etc.)
+├── NOTICE                  # Attribution chain (Tauri, React, HeroUI, Next.js, Rust, ...)
 ├── README.md               # This file
 ├── CHANGELOG.md            # Release changelog
-├── VERSION                 # Canonical version (last-RELEASED)
+├── VERSION                 # Canonical version (last-RELEASED, 0.0.4)
 ├── STARTER-PROMPT.md       # ECHO Protocol boot sequence
 ├── protocol.config.yaml    # ECHO project config (commands, quality bar, autonomy)
 ├── ECHO.md                 # The 15 Laws + Perfection Loop FSM + FID lifecycle
 ├── MIGRATION.md            # Breaking protocol/file structure transitions
 ├── coding-standards/       # Per-language rules (Rust, TypeScript, Python, Go, Java, C#, x402)
 ├── templates/              # FID + session summary templates
-├── public/                 # Static assets
-│   └── favicon/            # Favicon files (16x16, 32x32, apple-touch, android-chrome)
+├── public/                 # Static assets (favicon, manifest, sw, icons)
 ├── scripts/                # release.py + sync-agents.py
-├── src/                    # Next.js 15 + React 19 + HeroUI v3 alpha renderer
-│   ├── app/                # App Router pages (home, chat, manifest, settings, etc.)
-│   ├── components/         # React components (dashboard-shell, rating-box, etc.)
-│   └── lib/                # Utilities + IPC (logger, soul, manifest-mock, mock-ipc, etc.)
-├── src-tauri/              # Tauri 2 Rust daemon (single crate, will split in Phase 2+)
+├── src/                    # Next.js 15 renderer
+│   ├── app/                # App Router pages (home, chat, manifest, settings, reflections, health, ...)
+│   ├── components/         # React components (dashboard-shell, rating-box, bulk-diff-viewer, soul-body-viewer, ...)
+│   └── lib/                # Utilities + IPC
+│       ├── mock-ipc.ts     # Phase 1 mock IPC (auto-disables when __TAURI_INTERNALS__ is set)
+│       ├── soul.ts         # Build-time `?raw` re-export of workspace-savant/SOUL.md
+│       ├── reflections/    # FID-017: lens array + reflection parser (port from crates/agent/src/pulse/prompts.rs)
+│       ├── hooks/          # use-derived-rotation, use-lens-rotation, use-reflections, use-loaded-config
+│       ├── manifest-mock.ts, swarm-diff.ts, prompt-generator.ts, name-generator.ts, ...
+│       └── *.test.ts       # vitest unit tests (17 cases across the source-tree utilities)
+├── src-tauri/              # Tauri 2 Rust shell (`[lib] name = "savant_shell"`)
 │   ├── Cargo.toml
 │   ├── tauri.conf.json
 │   └── src/
-│       ├── main.rs
-│       ├── lib.rs
-│       ├── security/       # master_key vault (5-strategy cascade)
-│       └── inference/      # openrouter client (reqwest chat-completions)
+│       ├── main.rs         # savant_shell::run() entry point
+│       ├── lib.rs          # 8 IPC commands (setup_master_key, infer_openrouter, vault_list_profiles + FID-017: start/stop_consciousness, get_consciousness_state, trigger_reflection, initialize_app_state)
+│       ├── security/       # master_key.rs (5-strategy cascade vault)
+│       └── inference/      # openrouter.rs (reqwest chat-completions)
+│   └── tests/              # 2 integration tests (master_key_test + inference_smoke_test)
+├── crates/                 # 21 savant-orig crates (FID-016 restore, mechanically verified, reads clean)
+│   ├── core/ gateway/ agent/ skills/ mcp/ channels/ canvas/ cognitive/ ipc/ memory/
+│   └── dream/ panopticon/ obsidian/ integrations/ security/ sandbox/ echo/ browser/
+│       toolforge/ generation/ schema/
+├── lib/
+│   └── cortexadb/          # 5.2M / 22,816 LOC — vector zero-copy substrate
 ├── dev/                    # Engineering operations
 │   ├── fids/               # Runtime FIDs (gitignored, created on first run)
 │   ├── fids/archive/       # Closed FIDs (auto-archived per ECHO §FID Auto-Archive)
 │   ├── session-summaries/  # ECHO Protocol audit trail
 │   └── LEARNINGS.md        # Cross-session retained knowledge
-├── tests/                  # Rust integration tests
-├── e2e/                    # Playwright E2E tests
+├── e2e/                    # Playwright round-trips (auto-derived session key)
 └── workspace-savant/       # Agent resident workspace (FID-004r2)
-    ├── SOUL.md             # Canonical persona
-    ├── AGENTS.md           # Operating instructions + private diary spec
+    ├── SOUL.md             # Canonical persona (read by chat + manifest)
+    ├── AGENTS.md           # Operating instructions
     ├── LEARNINGS.md        # Agent-written at runtime
     └── EVOLUTION.jsonl     # Parser-managed at runtime
 ```
 
 ### Rust Module Map
 
-| Module                     |      Status      | Purpose                                                                                                             |
-| :------------------------- | :--------------: | :------------------------------------------------------------------------------------------------------------------ |
-| `src-tauri/src/security/`  |  LIVE (v0.0.3)   | Generalized multi-profile `Vault` (5-strategy cascade: env vars → cwd `.env` → exe `.env` → JSON vault → UI prompt) |
-| `src-tauri/src/inference/` |  LIVE (v0.0.3)   | `openrouter` provider client (reqwest chat-completions, reads `openrouter-default` profile)                         |
-| `src-tauri/src/trigger/`   | PLANNED (v0.1.0) | Trigger bus + hybrid tick scheduler                                                                                 |
-| `src-tauri/src/state/`     | PLANNED (v0.1.0) | SQLite WAL durable state                                                                                            |
-| `src-tauri/src/cognitive/` | PLANNED (v0.3.0) | Dual-loop cognitive engine (fast loop + slow reflection)                                                            |
+| Source                                  |  Status (v0.0.4)        | Purpose                                                                            |
+| :-------------------------------------- | :---------------------: | :--------------------------------------------------------------------------------- |
+| `src-tauri/`                            |          LIVE           | Tauri shell: vault + OpenRouter + Reflections IPC                                  |
+| `crates/core`                           |  RESTORED, on disk      | lib basename `savant_core` (savant-orig identity); Phase 2 wires unified vault     |
+| `crates/agent`                          |  RESTORED, on disk      | Agent + skills + learning parser; memory browser planned for v0.0.5+               |
+| `crates/cognitive`                      |  RESTORED, on disk      | Dual-loop engine (fast + slow reflection); Phase 3 wiring                          |
+| `crates/security`                       |  RESTORED, on disk      | Unified multi-profile vault (Phase 2 replacement for `src-tauri/src/security/`)   |
+| `crates/ipc`                            |  RESTORED, on disk      | Atlas zero-copy IPC substrate (iceoryx2); Phase 2 wiring                           |
+| `crates/memory`                         |  RESTORED, on disk      | CortexaDB + privacy.rs scanner; Phase 2 wiring                                     |
+| `crates/echo`                           |  RESTORED, on disk      | ECHO Protocol core (renderer ECHO is Phase 1, daemon ECHO is later)                 |
+| `crates/{11 more}`                      |  RESTORED, on disk      | Per FID-016; cargo workspace unified                                               |
 
 ---
 
 ## Development & Building
 
 ```bash
-npm run dev                # Browser preview (mock IPC) at :3000
-cargo tauri dev            # Tauri desktop (real Rust IPC)
-npm run build              # Static export (Next.js)
-cargo tauri build          # Tauri release executable
+# Renderer (Phase 1)
+npm run dev                      # Browser preview (mock IPC) at :3000
+npm run build                    # Static export (Next.js)
+cargo tauri dev                  # Tauri desktop (real Rust IPC)
+cargo tauri build                # Tauri release executable
 
-npm run test               # vitest unit tests
-npm run test:e2e           # Playwright E2E tests
-npm run test:all           # Unit + E2E
+# Tests
+npm run test                     # vitest unit tests
+npm run test:e2e                 # Playwright E2E tests
+npm run test:all                 # Unit + E2E
 
-npx tsc --noEmit           # TypeScript type-check
-npx prettier --check .     # Format check
-npx markdownlint-cli '**/*.md'  # Markdown lint
-cargo check --workspace    # Rust type-check
+# Workspace-wide Rust build (FID-016 restore verification)
+cargo check --workspace          # 0 errors, 0 warnings
+cargo build --workspace          # 0 errors, 0 warnings
+
+# Quality gates
+npx tsc --noEmit                 # TypeScript type-check
+npx prettier --check .           # Prettier format check
+npx markdownlint-cli '**/*.md'   # Markdown lint
 ```
 
 ---
 
 ## Roadmap
 
-| Version | Phase | Status  | Focus                                                                                                                                                          |
-| :------ | :---: | :------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| v0.0.1  |   1   | SHIPPED | Tauri 2 shell + master-key vault + OpenRouter smoke-test                                                                                                       |
-| v0.0.2  |   1   | SHIPPED | Auto-derived session key (FID-0003) + two-tier credential architecture + vitest/Playwright test framework                                                      |
-| v0.0.3  |   1   | **NOW** | Soul Builder (FID-006 v3) + LLM streaming (FID-010) + swarm diff (FID-013) + Perfection Loop (FID-009) + env key security + dev server fixes                   |
-| v0.0.4  |   1   | NEXT    | First Apache 2.0 release; (in flight) Quality Loop + early swarm plumbing                                                                                      |
-| v0.0.10 |   1   | PLANNED | Phase 1 stabilization (before minor bump)                                                                                                                      |
-| v0.1.0  |   2   | PLANNED | Trigger bus + hybrid tick + SQLite WAL durable state + dual-loop init + Rust module split (trigger/, state/, cognitive/)                                       |
-| v0.1.10 |   2   | PLANNED | Phase 2 stabilization (before minor bump)                                                                                                                      |
-| v0.2.0  |   3   | PLANNED | Tiered inference (fast loop + slow reflection) + observability + 16-provider chain                                                                             |
-| v0.3.0  |   4   | PLANNED | Mandatory Security Scanner + Two-Tier Agent System + Distributed Memory Substrate + Glass House (Obsidian sync) + Channels (Discord, Telegram, WhatsApp, etc.) |
-| v0.4.0  |   5   | PLANNED | Full UI shell (multi-pane dashboard + agent observability) + MCP integration + Windows DPAPI hardening + release signing + auto-update                         |
+| Version | Phase | Status   | Focus                                                                                                              |
+| :------ | :---: | :------- | :----------------------------------------------------------------------------------------------------------------- |
+| v0.0.1  |   1   | SHIPPED  | Tauri 2 shell + master-key vault + OpenRouter smoke-test                                                           |
+| v0.0.2  |   1   | SHIPPED  | Auto-derived session key (FID-0003) + two-tier credential + vitest/Playwright test framework                        |
+| v0.0.3  |   1   | SHIPPED  | Soul Builder (FID-006 v3) + LLM streaming (FID-010) + swarm diff (FID-013) + Perfection Loop (FID-009)              |
+| v0.0.4  |   1   | **NOW**  | Rust core restored (FID-016) + Reflections Viewer (FID-017) + lib rename (FID-016r2) + License MIT→Apache 2.0       |
+| v0.0.5  |   1   | NEXT     | Memory browser + skills marketplace + Phase 2 prelude (trigger bus + SQLite WAL prep)                              |
+| v0.1.0  |   2   | PLANNED  | Trigger bus + hybrid tick + SQLite WAL + dual-loop init + Rust module split (trigger/, state/, cognitive/)         |
+| v0.2.0  |   3   | PLANNED  | Tiered inference (fast + slow reflection) + observability + 16-provider chain                                      |
+| v0.3.0  |   4   | PLANNED  | Mandatory Security Scanner + Two-Tier Agent System + Distributed Memory Substrate + Channels                      |
+| v0.4.0  |   5   | PLANNED  | Full UI shell (multi-pane dashboard + agent observability) + MCP + Windows DPAPI + release signing                 |
 
-Each phase lives as a FID under `dev/fids/` as it ships.
+Each phase lives as a FID under [`dev/fids/`](dev/fids/) as it ships.
 
 ---
 
 ## Documentation
 
-- [ECHO.md](ECHO.md) — The 15 Laws + Perfection Loop FSM + FID lifecycle + circuit breakers. The protocol this project obeys.
-- [CHANGELOG.md](CHANGELOG.md) — Release history and changes (reverse chronological).
-- [MIGRATION.md](MIGRATION.md) — Breaking protocol/file structure transitions.
-- [protocol.config.yaml](protocol.config.yaml) — Build commands, quality bar, autonomy level, paths, testing, FID config, perfection-loop parameters.
-- [dev/LEARNINGS.md](dev/LEARNINGS.md) — Cross-session retained knowledge + codified lessons.
-- [dev/session-summaries/](dev/session-summaries/) — ECHO Protocol audit trail per release/session.
-- [coding-standards/](coding-standards/) — Per-language rules (Rust, TypeScript, Python, Go, Java, C#, x402).
-- [templates/](templates/) — FID + session summary templates.
-- [LICENSE](LICENSE) — Apache 2.0 license (full text).
-- [NOTICE](NOTICE) — Attribution chain (Tauri, React, HeroUI, Next.js, Rust, build/test tooling).
+- [`ECHO.md`](ECHO.md) — The 15 Laws + Perfection Loop FSM + FID lifecycle + circuit breakers. The protocol this project obeys.
+- [`CHANGELOG.md`](CHANGELOG.md) — Release history and changes (reverse chronological).
+- [`MIGRATION.md`](MIGRATION.md) — Breaking protocol/file structure transitions.
+- [`protocol.config.yaml`](protocol.config.yaml) — Build commands, quality bar, autonomy level, paths, testing, FID config.
+- [`dev/LEARNINGS.md`](dev/LEARNINGS.md) — Cross-session retained knowledge + codified lessons.
+- [`dev/session-summaries/`](dev/session-summaries/) — ECHO Protocol audit trail per release/session.
+- [`coding-standards/`](coding-standards/) — Per-language rules (Rust, TypeScript, Python, Go, Java, C#, x402).
+- [`templates/`](templates/) — FID + session summary templates.
+- [`LICENSE`](LICENSE) — Apache 2.0 license (full text).
+- [`NOTICE`](NOTICE) — Attribution chain (Tauri, React, HeroUI, Next.js, Rust, build/test tooling).
 
 ---
 
@@ -249,16 +252,7 @@ Each phase lives as a FID under `dev/fids/` as it ships.
 
 Apache 2.0 — see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
 
-Apache 2.0 grants an explicit patent license from contributors to
-users, with a retaliation clause (if you sue the project for
-patent infringement, your license terminates). Trademarks are
-NOT granted — the "Savant" name is reserved for the official
-project per §6 of the license. See the [LICENSE](LICENSE) for
-the full text and the [NOTICE](NOTICE) for the attribution chain.
-
-**Forward-effectivity:** v0.0.3 and earlier releases remain under
-their original MIT license. The MIT → Apache 2.0 change applies
-forward-effective from the next release (v0.0.4).
+Forward-effectivity: v0.0.3 and earlier releases remain under their original MIT license; the MIT → Apache 2.0 change applies from v0.0.4 forward. Apache 2.0 grants an explicit patent license from contributors to users, with a retaliation clause. Trademarks are NOT granted — the "Savant" name is reserved for the official project per §6 of the license.
 
 ---
 
