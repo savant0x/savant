@@ -59,6 +59,19 @@ savant_agent = { workspace = true }
 savant_core = { workspace = true }
 tokio-util = { workspace = true }
 
+# FID-025 — Skills + sandbox IPC surface (v0.0.6 feature batch).
+# Wire savant_skills (WASM runtime + Docker executor) + savant_sandbox
+# (OS-level process isolation via landlock + seccomp + JobObjects)
+# to the renderer via 5 new Tauri commands. Pure consumer-side wiring
+# (no code changes inside the underlying crates — per the FID-019 vault
+# stabilization precedent: declare-deps → adapter-mod → commands → test).
+savant_skills = { workspace = true }
+savant_sandbox = { workspace = true }
+
+# uuid is used by the FID-025 IPC adapter (ExecutionHandle::execution_id)
+# and the cancel_skill_execution command's Uuid::parse_str call.
+uuid = { workspace = true }
+
 # Note: schemars is reserved for Phase 2 specta bindings; not pulled in Phase 1.
 
 # Note: the per-platform `keyring` deps live in the `savant-vault` crate now

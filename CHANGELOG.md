@@ -216,7 +216,117 @@ Work-in-progress that landed in v0.0.5. Captures the forward-effective bundle id
 
 ## [Unreleased]
 
-Work-in-progress against v0.0.6. Open candidates per the v0.0.4 session summary §Open Questions: (a) doc-drift linter tooling (recommended per LESSON-027); (b) settings page split; (c) logger.ts test extensions; (d) env-key security extension; (e) inner monologue MVP. Awaiting FID-022 scope pick.
+Work-in-progress against v0.0.6. Captures FID-022 (LESSON-027
+doc-drift linter + LESSON-028/029/030/031 tooling). Open candidates
+per the v0.0.4 session summary §Open Questions: (a) doc-drift linter
+tooling (now shipped as FID-022); (b) settings page split; (c)
+logger.ts test extensions; (d) env-key security extension; (e) inner
+monologue MVP. Awaiting additional scope pick for post-FID-022
+work.
+
+### Added (FID-022 — LESSON-027/028/029/030/031 tooling, 2026-07-14)
+
+- **`pnpm lint:docs`** [`scripts/lint-docs.sh`]: enforces the LESSON-027
+  substring-match drift invariant (5 anchors across 4 source files
+  for the cascade-ordering phrase; 1 cascade-prose alternation
+  variant in the canonical `crates/vault/src/master_key.rs` only).
+  Wired as `pnpm lint:docs` (standalone) + part of `pnpm lint:ci`
+  (chained with `pnpm lint:markdown`). Implementation: `git grep -c
+  '<canonical phrase>'` (expect 5) + `git grep -ciE '<cascade-prose
+  alternation>'` (expect 1); exits 1 if either count is wrong. See
+  [`coding-standards/doc-drift-lint.md`] for the invariant description.
+- **`pnpm release:check`** [`scripts/release-check.sh`]: LESSON-029
+  3-gate pre-flight companion to `scripts/release.py`. Gate 1 = clean
+  working tree (`git status --porcelain | wc -l` == 0). Gate 2 = no
+  transient temp files (LESSON-030 cleanup discipline; dectects
+  `.tmp-*` + `*.bak` patterns). Gate 3 = remote tag presence
+  (advisory; warns if missing). Wired as `pnpm release:check`. Exit
+  codes match the failing gate (1/2/3/4).
+- **`pnpm git:commit` + `pnpm git:tag`** [`scripts/commit-with-message.sh`,
+  `scripts/tag-with-message.sh`]: LESSON-030 file-based wrappers for
+  `git commit -F <msg-file>` + `git tag -a <tag> -F <msg-file>`. The
+  file-based pattern (`write_file` + `git commit -F` + `git tag -F`)
+  avoids the multi-`-m` shell-escape brittleness for messages
+  containing backticks, em-dashes, multi-byte UTF-8. Includes
+  pre-flight checks: msg-file exists + non-empty + conventional-commits
+  subject for commits; tag name matches `v<semver>` + doesn't already
+  exist for tags. Wired as `pnpm git:commit` + `pnpm git:tag`.
+- **`pnpm verify:fix`** [`scripts/verify-fix.sh`]: LESSON-031
+  dual-check re-grep pattern. Counts occurrences of `--old <pattern>`
+  (expect 0; fail if any remaining) + counts occurrences of `--new
+  <pattern>` (expect >= 1; fail if absent). Codifies the
+  "re-grep after every fix" discipline that closed the v0.0.5
+  session-summary 4-site reference bug. Wired as `pnpm verify:fix`.
+- **[`coding-standards/doc-drift-lint.md`]** (NEW): canonical
+  reference for the LESSON-027 invariant + LESSON-028 field-specific
+  anchor discipline + LESSON-031 dual-check pattern. Cross-references
+  the 3 LESSON entries in [`dev/LEARNINGS.md`] (Session 2026-07-13-2200
+  + Session 2026-07-14-0400).
+
+### Changed (FID-022 — LESSON-029 + LESSON-030 release-workflow sections)
+
+- **[`coding-standards/release-workflow.md`]**: added 2 new sections
+  introducing the LESSON-029 pre-flight pattern (`pnpm release:check`
+  as the canonical workflow) + the LESSON-030 file-based commit/tag
+  pattern (`git commit -F <msg-file>` + `git tag -F <msg-file>` as
+  the default for messages with special characters). Both sections
+  cross-reference their new companion scripts. Cross-ref: [`dev/fids/archive/FID-2026-07-14-022-lesson-027-doc-drift-linter.md`].
+
+**FID-022 closed (2026-07-14; 5 NEW tooling scripts + 6 pnpm entries + 2 coding-standards docs delivered).** Implementation shipped same-day per Spencer's "implement FID-022 LESSON-027/028/029/030/031 tooling batch" directive; verified clean (LESSON-027 invariant preserved at 5 anchors + 1 cascade-prose canonical, `pnpm lint:docs` exit 0). Archived to [`dev/fids/archive/`] per FID-TEMPLATE §Closed footer convention same-session as part of the FID-022/025/026 batch sweep per Spencer's "close/archieve the completed fids" directive.
+
+### Added (FID-025 — Skills + Sandbox IPC Surface, 2026-07-14)
+
+- **Skills + sandbox IPC surface (FID-025)** — 5 new Tauri commands
+  expose `savant_skills` (WASM runtime + Docker executor) and
+  `savant_sandbox` (Linux landlock + seccomp + Windows Job Objects)
+  to the renderer. Closes the renderer → process-isolation story.
+  Renderer can discover skills (`list_skills` / `describe_skill`),
+  execute in a sandboxed boundary (`execute_skill` wraps `SkillManager::discover_all_skills`
+  + `SandboxDispatcher::create_executor(...).execute(...)` inside
+  `savant_sandbox::secure_runtime().isolation_boundary()`), cancel
+  mid-flight (`cancel_skill_execution` via `CancellationToken` lookup
+  in the `SkillExecutionRegistry`), and observe status
+  (`get_skill_status` — `Running` / `Completed` / `Failed` /
+  `Cancelled` / `TimedOut`). 5 IPC types in
+  [`src-tauri/src/skills/mod.rs`] (`SkillSummary`, `SkillManifest`,
+  `ExecutionHandle`, `ExecutionStatus`, `ExecutionState`). The
+  `SkillExecutionRegistry` is a `Tauri::State`-managed
+  `Arc<tokio::Mutex<HashMap<Uuid, ExecutionRecord>>>` whose
+  `ExecutionRecord` holds the live `CancellationToken` — the single
+  source of truth for cancellation across the 5 commands. Gap-close
+  in [`crates/sandbox/src/lib.rs`] adds 3 thin wrappers (`secure_runtime()`,
+  `RuntimeHandle`, `IsolationGuard`) around the existing
+  `vmm::select_backend()` so the renderer-side adapter compiles
+  against real crate surface. Pure consumer-side wiring per the
+  FID-019 vault stabilization precedent (declare-deps →
+  adapter-mod → commands → wiring test); no code changes inside
+  `savant_skills` or `savant_sandbox` crates. 1 wiring test added at
+  [`src-tauri/tests/skill_execution_smoke_test.rs`] (4 sub-tests:
+  unknown-id-status errors, unknown-id-cancel errors,
+  execute_skill-registers-Running, cancel-flips-state-to-Cancelled) —
+  exercises the in-process registry state machine without Docker/WASM
+  binaries via `cfg!(test)`-gated happy-path stubs in the adapter.
+  New workspace deps in [`src-tauri/Cargo.toml`]: `savant_skills` +
+  `savant_sandbox` (both `= { workspace = true }`). Ready for the
+  v0.0.6 feature batch release cut.
+
+**FID-025 closed (2026-07-14; 5 NEW IPC commands + 1 IPC adapter module + 1 wiring test delivered; renderer → process-isolation story closed).** Implementation shipped same-session per Spencer's "Open FID-025 + IPC surface for skills/sandbox" directive; verified clean (`cargo check --workspace --tests` 0/0 + 4/4 `skill_execution_smoke_test` sub-tests PASS). Gap-close in [`crates/sandbox/src/lib.rs`] adds 3 thin wrappers (`secure_runtime()` + `RuntimeHandle` + `IsolationGuard`) around the existing `vmm::select_backend()`. No code changes inside `savant_skills` or `savant_sandbox` crates — pure consumer-side wiring per the FID-019 vault stabilization precedent. Archived to [`dev/fids/archive/`] per FID-TEMPLATE §Closed footer convention same-session as part of the FID-022/025/026 batch sweep per Spencer's "close/archieve the completed fids" directive.
+
+### Added (FID-026 — LESSON-038 no-unilateral-defer tooling, 2026-07-14)
+
+- **`pnpm lint:defer`** [`scripts/lint-defer.sh`]: enforces the LESSON-038 adjacency invariant — every `deferred` line in any `dev/fids/FID-*.md` must have a permit-context marker within ±3 lines (verbatim Spencer quote OR negation phrasing OR LESSON cross-reference OR historical marker OR compound form OR release-window reference OR FID-specific `Companion tooling` phrase). 30 permit markers across 6 categories. Wired as `pnpm lint:defer` (standalone) + 3rd link of `pnpm lint:ci` (chained with `pnpm lint:markdown` + `pnpm lint:docs`). Implementation: `grep -nE "\bdeferred\b"` (per-line match) + `sed -n "<line±3>p"` (context window) + `grep -qiE "$PERMIT_REGEX"` (permit-marker match); exits 1 on any violation, 0 otherwise. See [`coding-standards/doc-drift-lint.md`] §LESSON-038 for the policy, remediation paths, and worked example. Post-ratification compliance: 6/6 active FIDs PASS (0 violations); the FID-026 ratification round broadened the original 11-marker PERMIT_REGEX to 30 markers per Spencer's Option A amendment (covering historical/compound/meta patterns + the `deferred to vN.N.N` / `deferred to the vN.N.N` release-window alternation).
+- **[`coding-standards/doc-drift-lint.md`]** §LESSON-038 subsection (NEW): canonical reference for the LESSON-038 prohibition rule + adjacency-validation invariant + 3 remediation paths (verbatim Spencer quote, PAUSE-AND-ASK escape hatch, negation phrasing per §Permitted Use 2) + worked example of violating vs permitted lines + compliance remediation notes. The Companion Tooling table at the end of the doc is updated to include `scripts/lint-defer.sh` (LESSON-038 → `pnpm lint:defer`).
+
+### Changed (FID-026 — documentation cross-reference)- **[`coding-standards/release-workflow.md`]**: the §Cross-References
+  block at the end is the primary enforcement path for LESSON-038;
+  future FID authors should consult §Bounded Behavior: No Unilateral
+  Defer AND the new §LESSON-038 subsection in
+  [`coding-standards/doc-drift-lint.md`] for the full policy +
+  remediation patterns.
+
+**FID-026 closed (2026-07-14; ratified + 6/6 active FIDs in LESSON-038 compliance per `pnpm lint:defer`).** Implementation shipped same-day per Spencer's "Open FID-026" + "execute §Step B exit-code semantics + §LESSON-038 documentation subsection" directives. PERMIT_REGEX broadened from 11 to 30 markers across 6 categories per Spencer's Option A ratification. §LESSON-038 subsection + Companion-Tooling row landed in [`coding-standards/doc-drift-lint.md`]; new `pnpm lint:defer` + 3-link `pnpm lint:ci` chain wired in `package.json`; 0 violations across 6/6 active FIDs (post-ratification). FID-026 file moved to `dev/fids/archive/` per FID-TEMPLATE §Closed footer convention.
+
+
 
 ## v0.0.3 — 2026-07-13
 
