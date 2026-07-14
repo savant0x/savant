@@ -1,15 +1,19 @@
-//! Savant — Phase 1 daemon + Phase 2 inner monologue wiring (FID-017).
+//! Savant — Phase 1 daemon + Phase 2 inner monologue wiring (FID-017)
+//! + Phase 3 skills/sandbox IPC surface (FID-025).
 //!
-//! Tauri 2 surface that exposes 8 IPC commands:
+//! Tauri 2 surface that exposes 13 IPC commands:
 //! - Phase 1: `setup_master_key`, `infer_openrouter`, `vault_list_profiles`
 //! - Phase 2 (FID-017): `initialize_app_state`, `start_consciousness`,
 //!   `stop_consciousness`, `get_consciousness_state`, `trigger_reflection`
+//! - Phase 3 (FID-025): `list_skills`, `describe_skill`, `execute_skill`,
+//!   `cancel_skill_execution`, `get_skill_status`
 //!
 //! The crate is `savant_shell` (renamed from `savant_core` in FID-016r2
 //! to disambiguate from `crates/core` which also exports `savant_core`).
 //! The `src-tauri/src/main.rs` calls `savant_shell::run()` to bootstrap.
 
 pub mod inference;
+pub mod skills;
 
 use crate::inference::openrouter;
 use savant_vault::master_key::{self, ProfileSummary};
@@ -22,6 +26,7 @@ use tauri::Manager;
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
+use uuid::Uuid;
 
 // ─── Phase 1 commands (unchanged) ──────────────────────────────────
 
@@ -191,6 +196,57 @@ async fn trigger_reflection(
     Ok(narrative)
 }
 
+// ─── Phase 3 commands (FID-025 — Skills + Sandbox IPC Surface) ─────
+
+/// Lists skills discovered in `workspace-savant/skills/`.
+#[tauri::command]
+async fn list_skills(
+    state: tauri::State<'_, skills::SkillExecutionRegistry>,
+) -> Result<Vec<skills::SkillSummary>, String> {
+    skills::list_skills(&state).await
+}
+
+/// Returns the full manifest for one skill by id.
+#[tauri::command]
+async fn describe_skill(
+    state: tauri::State<'_, skills::SkillExecutionRegistry>,
+    skill_id: String,
+) -> Result<skills::SkillManifest, String> {
+    skills::describe_skill(skill_id, &state).await
+}
+
+/// Spawns a skill execution. Returns immediately with an
+/// `ExecutionHandle{ execution_id }`; renderer uses `cancel_skill_execution`
+/// + `get_skill_status` to observe + control the in-flight run.
+#[tauri::command]
+async fn execute_skill(
+    state: tauri::State<'_, skills::SkillExecutionRegistry>,
+    skill_id: String,
+    params: serde_json::Value,
+) -> Result<skills::ExecutionHandle, String> {
+    skills::execute_skill(skill_id, params, &state).await
+}
+
+/// Cancels an in-flight execution.
+#[tauri::command]
+async fn cancel_skill_execution(
+    state: tauri::State<'_, skills::SkillExecutionRegistry>,
+    execution_id: String,
+) -> Result<(), String> {
+    let id = Uuid::parse_str(&execution_id).map_err(|e| e.to_string())?;
+    skills::cancel_skill_execution(id, &state).await
+}
+
+/// Reads the current status of an execution by id.
+#[tauri::command]
+async fn get_skill_status(
+    state: tauri::State<'_, skills::SkillExecutionRegistry>,
+    execution_id: String,
+) -> Result<skills::ExecutionStatus, String> {
+    let id = Uuid::parse_str(&execution_id).map_err(|e| e.to_string())?;
+    skills::get_skill_status(id, &state).await
+}
+
 /// FID-020r2: Load `<exe_dir>/.env` to wire the vault's strategy 3
 /// (`crates/vault/src/master_key.rs:19`). Called from `run()` with
 /// `std::env::current_exe()`; `pub` so integration tests can pass a
@@ -258,6 +314,11 @@ pub fn run() {
             stop_consciousness,
             get_consciousness_state,
             trigger_reflection,
+            list_skills,
+            describe_skill,
+            execute_skill,
+            cancel_skill_execution,
+            get_skill_status
         ])
         .setup(|app| {
             tracing::info!(
@@ -272,6 +333,11 @@ pub fn run() {
                 .join("workspace-savant");
             std::fs::create_dir_all(&workspace_path).ok();
             app.manage(AppState::new(workspace_path));
+            // Initialize the skills execution registry — single source of
+            // truth for in-flight + recently-completed skill executions +
+            // their CancellationTokens. Wired by FID-025 to the 5 IPC
+            // commands in `src-tauri/src/skills/mod.rs`.
+            app.manage(skills::SkillExecutionRegistry::new());
             let _ = app.handle();
             Ok(())
         })
