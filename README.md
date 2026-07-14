@@ -20,11 +20,17 @@ A desktop-resident proactive AI shell built on Next.js 15, Tauri 2, and Rust. Th
 
 Full release notes in [`CHANGELOG.md`](CHANGELOG.md) `## v0.0.4 — 2026-07-13`. FID scaffold in [`dev/fids/`](dev/fids/).
 
+## What's New in v0.0.5
+
+- **Tauri bundle identifier + Cargo crate/binary names aligned to `savant` brand.** `src-tauri/tauri.conf.json:identifier` `com.savant.core` → `com.savant.app`; `src-tauri/Cargo.toml` `[package].name` + `[[bin]].name` `savant-core` → `savant` (closes the boilerplate-era `savant-core` / `com.savant.core` artifacts in favor of full alignment with the renderer `package.json: "savant"` + the `protocol.config.yaml project.name: "savant"` + the workspace brand). Lib name `savant_shell` preserved (FID-016r2 design). **Forward-effective:** existing v0.0.4 + earlier users will need to **re-install** the app (Windows registry entry + `%APPDATA%` dir rename; macOS `.app` bundle path change; Linux `.desktop` entry rename) — standard identity-rename cost. Per LESSON-019 release-only-versioning discipline, the rename work landed in v0.0.5 (post-v0.0.4).
+
+Full release notes in [`CHANGELOG.md`](CHANGELOG.md) `## v0.0.5 — 2026-07-13`. FID scaffold in [`dev/fids/`](dev/fids/).
+
 ---
 
 <div align="center">
 
-[![React](https://img.shields.io/badge/React-19-%23000000?style=flat-square&logo=react&logoColor=%2300fbff)](https://react.dev/)[![Next.js](https://img.shields.io/badge/Next.js-15-%23000000?style=flat-square&logo=nextdotjs&logoColor=%2300fbff)](https://nextjs.org/)[![Tauri](https://img.shields.io/badge/Tauri-2.x-%23000000?style=flat-square&logo=tauri&logoColor=%2300fbff)](https://tauri.app/)[![Rust](https://img.shields.io/badge/Rust-1.86+-%23000000?style=flat-square&logo=rust&logoColor=%2300fbff)](https://www.rust-lang.org/)[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-%23000000?style=flat-square&logo=typescript&logoColor=%2300fbff)](https://www.typescriptlang.org/)[![HeroUI](https://img.shields.io/badge/HeroUI-v3_Alpha-%23000000?style=flat-square&logo=react&logoColor=%2300fbff)](https://heroui.com/)[![License](https://img.shields.io/badge/License-Apache_2.0-%23000000?style=flat-square&logo=github&logoColor=%2300fbff)](LICENSE)[![Status](https://img.shields.io/badge/Status-v0.0.4_Released-%23000000?style=flat-square&color=brightgreen)](CHANGELOG.md)
+[![React](https://img.shields.io/badge/React-19-%23000000?style=flat-square&logo=react&logoColor=%2300fbff)](https://react.dev/)[![Next.js](https://img.shields.io/badge/Next.js-15-%23000000?style=flat-square&logo=nextdotjs&logoColor=%2300fbff)](https://nextjs.org/)[![Tauri](https://img.shields.io/badge/Tauri-2.x-%23000000?style=flat-square&logo=tauri&logoColor=%2300fbff)](https://tauri.app/)[![Rust](https://img.shields.io/badge/Rust-1.86+-%23000000?style=flat-square&logo=rust&logoColor=%2300fbff)](https://www.rust-lang.org/)[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-%23000000?style=flat-square&logo=typescript&logoColor=%2300fbff)](https://www.typescriptlang.org/)[![HeroUI](https://img.shields.io/badge/HeroUI-v3_Alpha-%23000000?style=flat-square&logo=react&logoColor=%2300fbff)](https://heroui.com/)[![License](https://img.shields.io/badge/License-Apache_2.0-%23000000?style=flat-square&logo=github&logoColor=%2300fbff)](LICENSE)[![Status](https://img.shields.io/badge/Status-v0.0.5_Released-%23000000?style=flat-square&color=brightgreen)](CHANGELOG.md)
 
 </div>
 
@@ -222,8 +228,8 @@ npx markdownlint-cli '**/*.md'   # Markdown lint
 | v0.0.1  |   1   | SHIPPED  | Tauri 2 shell + master-key vault + OpenRouter smoke-test                                                           |
 | v0.0.2  |   1   | SHIPPED  | Auto-derived session key (FID-0003) + two-tier credential + vitest/Playwright test framework                        |
 | v0.0.3  |   1   | SHIPPED  | Soul Builder (FID-006 v3) + LLM streaming (FID-010) + swarm diff (FID-013) + Perfection Loop (FID-009)              |
-| v0.0.4  |   1   | **NOW**  | Rust core restored (FID-016) + Reflections Viewer (FID-017) + lib rename (FID-016r2) + License MIT→Apache 2.0       |
-| v0.0.5  |   1   | NEXT     | Memory browser + skills marketplace + Phase 2 prelude (trigger bus + SQLite WAL prep)                              |
+| v0.0.4  |   1   | SHIPPED  | Rust core restored (FID-016) + Reflections Viewer (FID-017) + lib rename (FID-016r2) + License MIT→Apache 2.0       |
+| v0.0.5  |   1   | **NOW**  | Bundle identifier + Cargo crate/binary alignment to `savant` brand (boilerplate→Savant cutover continuation)            |
 | v0.1.0  |   2   | PLANNED  | Trigger bus + hybrid tick + SQLite WAL + dual-loop init + Rust module split (trigger/, state/, cognitive/)         |
 | v0.2.0  |   3   | PLANNED  | Tiered inference (fast + slow reflection) + observability + 16-provider chain                                      |
 | v0.3.0  |   4   | PLANNED  | Mandatory Security Scanner + Two-Tier Agent System + Distributed Memory Substrate + Channels                      |

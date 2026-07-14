@@ -198,11 +198,11 @@ provenance — closes the LESSON-025 forward-effective cross-link);
   `InvalidKeyFormat` on an unset env var. `cargo check --workspace
   --tests` clean.
 
-## [Unreleased]
+## v0.0.5 — 2026-07-13
 
-Work-in-progress against v0.0.5. FID-021 (cascade-doc-consolidation)
-close-out captures the v0.0.4 doc-cleanup work; subsequent v0.0.5 work
-will land here.
+Work-in-progress that landed in v0.0.5. Captures the forward-effective bundle identifier + Cargo crate/binary name alignment (boilerplate-era `com.savant.core` / `savant-core` → `com.savant.app` / `savant`). Per LESSON-019 release-only-versioning discipline, the rename work landed in v0.0.5 (post-v0.0.4). The v0.0.4 doc-only followup (session summary commit) is captured separately in [`dev/session-summaries/2026-07-13-v0.0.4-release.md`].
+
+**TLDR:** Bundle identifier renamed `com.savant.core` → `com.savant.app`; Cargo crate + binary names renamed `savant-core` → `savant`; lib name `savant_shell` preserved (FID-016r2 design). Existing v0.0.4 + earlier users must re-install the app at v0.0.5 (Windows registry + `%APPDATA%` dir rename; macOS `.app` bundle path change; Linux `.desktop` entry rename) — standard identity-rename cost. Verified clean: `cargo check --lib` (0/0); `npx tsc --noEmit` (clean); drift invariant (LESSON-027) = 5 anchors; 0 residual `com.savant.core` / `savant-core` in source code. Forward-effective change — see commit `592da64` for the implementation.
 
 ### Added
 
@@ -213,6 +213,10 @@ will land here.
 ### Fixed
 
 ### Removed
+
+## [Unreleased]
+
+Work-in-progress against v0.0.6. Open candidates per the v0.0.4 session summary §Open Questions: (a) doc-drift linter tooling (recommended per LESSON-027); (b) settings page split; (c) logger.ts test extensions; (d) env-key security extension; (e) inner monologue MVP. Awaiting FID-022 scope pick.
 
 ## v0.0.3 — 2026-07-13
 
