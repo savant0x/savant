@@ -20,6 +20,11 @@
     "lint:defer": "bash scripts/lint-defer.sh",
     "lint:ci": "pnpm lint && pnpm lint:docs && pnpm lint:defer",
     "release:check": "bash scripts/release-check.sh",
+    "release:prep": "bash scripts/release-prep.sh",
+    "release:archive": "bash scripts/archive-fids.sh",
+    "release:bump": "bash scripts/bump-version.sh",
+    "release:readme": "bash scripts/refresh-readme.sh",
+    "release:clean": "bash scripts/clean-bloat.sh",
     "git:commit": "bash scripts/commit-with-message.sh",
     "git:tag": "bash scripts/tag-with-message.sh",
     "verify:fix": "bash scripts/verify-fix.sh"
