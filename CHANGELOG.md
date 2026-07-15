@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+Work-in-progress against v0.0.8. Open candidates: (a) FID-029 §Step 2-5 (chat persistence renderer-side); (b) FID-030 (CLI scaffold); (c) FID-032 (api-client refactor); (d) FID-033 (Tauri repackaging to apps/tauri/); (e) FID-034 (kernel trait adoption); (f) FID-035 master-FID §Layered Build Order. Awaiting begin-ratification per LESSON-051.
+
+
+## v0.0.7 — 2026-07-15
+
 Work-in-progress against v0.0.7. Per the v0.0.6 release summary §Open Questions: (a) Layer 1a chat persistence; (b) Layer 1b memory graph; (c) Layer 2 CLI scaffold; (d) Layer 3 api-client swap; (e) Layer 4 Tauri repackage to apps/tauri/. Awaiting FID-029/030/032/033 begin ratification per LESSON-051.
 
 ### Added (Foundation commit 8512f78, 2026-07-15)

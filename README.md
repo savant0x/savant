@@ -10,7 +10,7 @@ A CLI-launched AI shell built on Next.js 15 + Rust. Phase 1 ships a renderer-fir
 <!-- BADGES_START -->
 <div align="center">
 
-[![React](https://img.shields.io/badge/React-19-%23000000?style=flat-square&logo=react&logoColor=%2300fbff)](https://react.dev/)[![Next.js](https://img.shields.io/badge/Next.js-15-%23000000?style=flat-square&logo=nextdotjs&logoColor=%2300fbff)](https://nextjs.org/)[![Rust](https://img.shields.io/badge/Rust-1.86+-%23000000?style=flat-square&logo=rust&logoColor=%2300fbff)](https://www.rust-lang.org/)[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-%23000000?style=flat-square&logo=typescript&logoColor=%2300fbff)](https://www.typescriptlang.org/)[![HeroUI](https://img.shields.io/badge/HeroUI-v3_Alpha-%23000000?style=flat-square&logo=react&logoColor=%2300fbff)](heroui.com/)[![License](https://img.shields.io/badge/License-Apache_2.0-%23000000?style=flat-square&logo=github&logoColor=%2300fbff)](LICENSE)[![Status](https://img.shields.io/badge/Status-v0.0.6_Released-%23000000?style=flat-square&color=brightgreen)](CHANGELOG.md)
+[![React](https://img.shields.io/badge/React-19-%23000000?style=flat-square&logo=react&logoColor=%2300fbff)](https://react.dev/)[![Next.js](https://img.shields.io/badge/Next.js-15-%23000000?style=flat-square&logo=nextdotjs&logoColor=%2300fbff)](https://nextjs.org/)[![Rust](https://img.shields.io/badge/Rust-1.86+-%23000000?style=flat-square&logo=rust&logoColor=%2300fbff)](https://www.rust-lang.org/)[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-%23000000?style=flat-square&logo=typescript&logoColor=%2300fbff)](https://www.typescriptlang.org/)[![HeroUI](https://img.shields.io/badge/HeroUI-v3_Alpha-%23000000?style=flat-square&logo=react&logoColor=%2300fbff)](heroui.com/)[![License](https://img.shields.io/badge/License-Apache_2.0-%23000000?style=flat-square&logo=github&logoColor=%2300fbff)](LICENSE)[![Status](https://img.shields.io/badge/Status-v0.0.7_Released-%23000000?style=flat-square&color=brightgreen)](CHANGELOG.md)
 
 </div>
 <!-- BADGES_END -->
@@ -20,79 +20,79 @@ A CLI-launched AI shell built on Next.js 15 + Rust. Phase 1 ships a renderer-fir
 ---
 
 <!-- WHATS_NEW_START -->
-## What's New in v0.0.6
+## What's New in v0.0.7
 
-- **`pnpm lint:docs`** [`scripts/lint-docs.sh`]: enforces the LESSON-027
-  substring-match drift invariant (5 anchors across 4 source files
-  for the cascade-ordering phrase; 1 cascade-prose alternation
-  variant in the canonical `crates/vault/src/master_key.rs` only).
-  Wired as `pnpm lint:docs` (standalone) + part of `pnpm lint:ci`
-  (chained with `pnpm lint:markdown`). Implementation: `git grep -c
-  '<canonical phrase>'` (expect 5) + `git grep -ciE '<cascade-prose
-  alternation>'` (expect 1); exits 1 if either count is wrong. See
-  [`coding-standards/doc-drift-lint.md`] for the invariant description.
-- **`pnpm release:check`** [`scripts/release-check.sh`]: LESSON-029
-  3-gate pre-flight companion to `scripts/release.py`. Gate 1 = clean
-  working tree (`git status --porcelain | wc -l` == 0). Gate 2 = no
-  transient temp files (LESSON-030 cleanup discipline; dectects
-  `.tmp-*` + `*.bak` patterns). Gate 3 = remote tag presence
-  (advisory; warns if missing). Wired as `pnpm release:check`. Exit
-  codes match the failing gate (1/2/3/4).
-- **`pnpm git:commit` + `pnpm git:tag`** [`scripts/commit-with-message.sh`,
-  `scripts/tag-with-message.sh`]: LESSON-030 file-based wrappers for
-  `git commit -F <msg-file>` + `git tag -a <tag> -F <msg-file>`. The
-  file-based pattern (`write_file` + `git commit -F` + `git tag -F`)
-  avoids the multi-`-m` shell-escape brittleness for messages
-  containing backticks, em-dashes, multi-byte UTF-8. Includes
-  pre-flight checks: msg-file exists + non-empty + conventional-commits
-  subject for commits; tag name matches `v<semver>` + doesn't already
-  exist for tags. Wired as `pnpm git:commit` + `pnpm git:tag`.
-- **`pnpm verify:fix`** [`scripts/verify-fix.sh`]: LESSON-031
-  dual-check re-grep pattern. Counts occurrences of `--old <pattern>`
-  (expect 0; fail if any remaining) + counts occurrences of `--new
-  <pattern>` (expect >= 1; fail if absent). Codifies the
-  "re-grep after every fix" discipline that closed the v0.0.5
-  session-summary 4-site reference bug. Wired as `pnpm verify:fix`.
-- **[`coding-standards/doc-drift-lint.md`]** (NEW): canonical
-  reference for the LESSON-027 invariant + LESSON-028 field-specific
-  anchor discipline + LESSON-031 dual-check pattern. Cross-references
-  the 3 LESSON entries in [`dev/LEARNINGS.md`] (Session 2026-07-13-2200
-  + Session 2026-07-14-0400).
-- **Skills + sandbox IPC surface (FID-025)** — 5 new Tauri commands
-  expose `savant_skills` (WASM runtime + Docker executor) and
-  `savant_sandbox` (Linux landlock + seccomp + Windows Job Objects)
-  to the renderer. Closes the renderer → process-isolation story.
-  Renderer can discover skills (`list_skills` / `describe_skill`),
-  execute in a sandboxed boundary (`execute_skill` wraps `SkillManager::discover_all_skills`
-  + `SandboxDispatcher::create_executor(...).execute(...)` inside
-  `savant_sandbox::secure_runtime().isolation_boundary()`), cancel
-  mid-flight (`cancel_skill_execution` via `CancellationToken` lookup
-  in the `SkillExecutionRegistry`), and observe status
-  (`get_skill_status` — `Running` / `Completed` / `Failed` /
-  `Cancelled` / `TimedOut`). 5 IPC types in
-  [`src-tauri/src/skills/mod.rs`] (`SkillSummary`, `SkillManifest`,
-  `ExecutionHandle`, `ExecutionStatus`, `ExecutionState`). The
-  `SkillExecutionRegistry` is a `Tauri::State`-managed
-  `Arc<tokio::Mutex<HashMap<Uuid, ExecutionRecord>>>` whose
-  `ExecutionRecord` holds the live `CancellationToken` — the single
-  source of truth for cancellation across the 5 commands. Gap-close
-  in [`crates/sandbox/src/lib.rs`] adds 3 thin wrappers (`secure_runtime()`,
-  `RuntimeHandle`, `IsolationGuard`) around the existing
-  `vmm::select_backend()` so the renderer-side adapter compiles
-  against real crate surface. Pure consumer-side wiring per the
-  FID-019 vault stabilization precedent (declare-deps →
-  adapter-mod → commands → wiring test); no code changes inside
-  `savant_skills` or `savant_sandbox` crates. 1 wiring test added at
-  [`src-tauri/tests/skill_execution_smoke_test.rs`] (4 sub-tests:
-  unknown-id-status errors, unknown-id-cancel errors,
-  execute_skill-registers-Running, cancel-flips-state-to-Cancelled) —
-  exercises the in-process registry state machine without Docker/WASM
-  binaries via `cfg!(test)`-gated happy-path stubs in the adapter.
-  New workspace deps in [`src-tauri/Cargo.toml`]: `savant_skills` +
-  `savant_sandbox` (both `= { workspace = true }`). Ready for the
-  v0.0.6 feature batch release cut.
-- **`pnpm lint:defer`** [`scripts/lint-defer.sh`]: enforces the LESSON-038 adjacency invariant — every `deferred` line in any `dev/fids/FID-*.md` must have a permit-context marker within ±3 lines (verbatim Spencer quote OR negation phrasing OR LESSON cross-reference OR historical marker OR compound form OR release-window reference OR FID-specific `Companion tooling` phrase). 30 permit markers across 6 categories. Wired as `pnpm lint:defer` (standalone) + 3rd link of `pnpm lint:ci` (chained with `pnpm lint:markdown` + `pnpm lint:docs`). Implementation: `grep -nE "deferred"` (per-line match) + `sed -n "<line±3>p"` (context window) + `grep -qiE "$PERMIT_REGEX"` (permit-marker match); exits 1 on any violation, 0 otherwise. See [`coding-standards/doc-drift-lint.md`] §LESSON-038 for the policy, remediation paths, and worked example. Post-ratification compliance: 6/6 active FIDs PASS (0 violations); the FID-026 ratification round broadened the original 11-marker PERMIT_REGEX to 30 markers per Spencer's Option A amendment (covering historical/compound/meta patterns + the `deferred to vN.N.N` / `deferred to the vN.N.N` release-window alternation).
-- **[`coding-standards/doc-drift-lint.md`]** §LESSON-038 subsection (NEW): canonical reference for the LESSON-038 prohibition rule + adjacency-validation invariant + 3 remediation paths (verbatim Spencer quote, PAUSE-AND-ASK escape hatch, negation phrasing per §Permitted Use 2) + worked example of violating vs permitted lines + compliance remediation notes. The Companion Tooling table at the end of the doc is updated to include `scripts/lint-defer.sh` (LESSON-038 → `pnpm lint:defer`).
+- **`pnpm lint:docs`** [`scripts/lint-docs.sh`]: enforces the LESSON-027
+  substring-match drift invariant (5 anchors across 4 source files
+  for the cascade-ordering phrase; 1 cascade-prose alternation
+  variant in the canonical `crates/vault/src/master_key.rs` only).
+  Wired as `pnpm lint:docs` (standalone) + part of `pnpm lint:ci`
+  (chained with `pnpm lint:markdown`). Implementation: `git grep -c
+  '<canonical phrase>'` (expect 5) + `git grep -ciE '<cascade-prose
+  alternation>'` (expect 1); exits 1 if either count is wrong. See
+  [`coding-standards/doc-drift-lint.md`] for the invariant description.
+- **`pnpm release:check`** [`scripts/release-check.sh`]: LESSON-029
+  3-gate pre-flight companion to `scripts/release.py`. Gate 1 = clean
+  working tree (`git status --porcelain | wc -l` == 0). Gate 2 = no
+  transient temp files (LESSON-030 cleanup discipline; dectects
+  `.tmp-*` + `*.bak` patterns). Gate 3 = remote tag presence
+  (advisory; warns if missing). Wired as `pnpm release:check`. Exit
+  codes match the failing gate (1/2/3/4).
+- **`pnpm git:commit` + `pnpm git:tag`** [`scripts/commit-with-message.sh`,
+  `scripts/tag-with-message.sh`]: LESSON-030 file-based wrappers for
+  `git commit -F <msg-file>` + `git tag -a <tag> -F <msg-file>`. The
+  file-based pattern (`write_file` + `git commit -F` + `git tag -F`)
+  avoids the multi-`-m` shell-escape brittleness for messages
+  containing backticks, em-dashes, multi-byte UTF-8. Includes
+  pre-flight checks: msg-file exists + non-empty + conventional-commits
+  subject for commits; tag name matches `v<semver>` + doesn't already
+  exist for tags. Wired as `pnpm git:commit` + `pnpm git:tag`.
+- **`pnpm verify:fix`** [`scripts/verify-fix.sh`]: LESSON-031
+  dual-check re-grep pattern. Counts occurrences of `--old <pattern>`
+  (expect 0; fail if any remaining) + counts occurrences of `--new
+  <pattern>` (expect >= 1; fail if absent). Codifies the
+  "re-grep after every fix" discipline that closed the v0.0.5
+  session-summary 4-site reference bug. Wired as `pnpm verify:fix`.
+- **[`coding-standards/doc-drift-lint.md`]** (NEW): canonical
+  reference for the LESSON-027 invariant + LESSON-028 field-specific
+  anchor discipline + LESSON-031 dual-check pattern. Cross-references
+  the 3 LESSON entries in [`dev/LEARNINGS.md`] (Session 2026-07-13-2200
+  + Session 2026-07-14-0400).
+- **Skills + sandbox IPC surface (FID-025)** — 5 new Tauri commands
+  expose `savant_skills` (WASM runtime + Docker executor) and
+  `savant_sandbox` (Linux landlock + seccomp + Windows Job Objects)
+  to the renderer. Closes the renderer → process-isolation story.
+  Renderer can discover skills (`list_skills` / `describe_skill`),
+  execute in a sandboxed boundary (`execute_skill` wraps `SkillManager::discover_all_skills`
+  + `SandboxDispatcher::create_executor(...).execute(...)` inside
+  `savant_sandbox::secure_runtime().isolation_boundary()`), cancel
+  mid-flight (`cancel_skill_execution` via `CancellationToken` lookup
+  in the `SkillExecutionRegistry`), and observe status
+  (`get_skill_status` — `Running` / `Completed` / `Failed` /
+  `Cancelled` / `TimedOut`). 5 IPC types in
+  [`src-tauri/src/skills/mod.rs`] (`SkillSummary`, `SkillManifest`,
+  `ExecutionHandle`, `ExecutionStatus`, `ExecutionState`). The
+  `SkillExecutionRegistry` is a `Tauri::State`-managed
+  `Arc<tokio::Mutex<HashMap<Uuid, ExecutionRecord>>>` whose
+  `ExecutionRecord` holds the live `CancellationToken` — the single
+  source of truth for cancellation across the 5 commands. Gap-close
+  in [`crates/sandbox/src/lib.rs`] adds 3 thin wrappers (`secure_runtime()`,
+  `RuntimeHandle`, `IsolationGuard`) around the existing
+  `vmm::select_backend()` so the renderer-side adapter compiles
+  against real crate surface. Pure consumer-side wiring per the
+  FID-019 vault stabilization precedent (declare-deps →
+  adapter-mod → commands → wiring test); no code changes inside
+  `savant_skills` or `savant_sandbox` crates. 1 wiring test added at
+  [`src-tauri/tests/skill_execution_smoke_test.rs`] (4 sub-tests:
+  unknown-id-status errors, unknown-id-cancel errors,
+  execute_skill-registers-Running, cancel-flips-state-to-Cancelled) —
+  exercises the in-process registry state machine without Docker/WASM
+  binaries via `cfg!(test)`-gated happy-path stubs in the adapter.
+  New workspace deps in [`src-tauri/Cargo.toml`]: `savant_skills` +
+  `savant_sandbox` (both `= { workspace = true }`). Ready for the
+  v0.0.6 feature batch release cut.
+- **`pnpm lint:defer`** [`scripts/lint-defer.sh`]: enforces the LESSON-038 adjacency invariant — every `deferred` line in any `dev/fids/FID-*.md` must have a permit-context marker within ±3 lines (verbatim Spencer quote OR negation phrasing OR LESSON cross-reference OR historical marker OR compound form OR release-window reference OR FID-specific `Companion tooling` phrase). 30 permit markers across 6 categories. Wired as `pnpm lint:defer` (standalone) + 3rd link of `pnpm lint:ci` (chained with `pnpm lint:markdown` + `pnpm lint:docs`). Implementation: `grep -nE "deferred"` (per-line match) + `sed -n "<line±3>p"` (context window) + `grep -qiE "$PERMIT_REGEX"` (permit-marker match); exits 1 on any violation, 0 otherwise. See [`coding-standards/doc-drift-lint.md`] §LESSON-038 for the policy, remediation paths, and worked example. Post-ratification compliance: 6/6 active FIDs PASS (0 violations); the FID-026 ratification round broadened the original 11-marker PERMIT_REGEX to 30 markers per Spencer's Option A amendment (covering historical/compound/meta patterns + the `deferred to vN.N.N` / `deferred to the vN.N.N` release-window alternation).
+- **[`coding-standards/doc-drift-lint.md`]** §LESSON-038 subsection (NEW): canonical reference for the LESSON-038 prohibition rule + adjacency-validation invariant + 3 remediation paths (verbatim Spencer quote, PAUSE-AND-ASK escape hatch, negation phrasing per §Permitted Use 2) + worked example of violating vs permitted lines + compliance remediation notes. The Companion Tooling table at the end of the doc is updated to include `scripts/lint-defer.sh` (LESSON-038 → `pnpm lint:defer`).
 - **33 NEW `/v1/*` endpoints (32 REST + 1 SSE) (FID-031)** [`crates/gateway/src/handlers/v1/`]: collapses the Tauri IPC surface into a host-agnostic HTTP+WebSocket layer for the Strangler-Fig Tauri→CLI pivot. 32 REST handlers map directly to existing Tauri IPC commands (changelog / faq / vault / consciousness / inference / manifest / skills / chat / tune / session) + 1 SSE handler (`/v1/stream`) drives long-lived channels. Static dashboard serving via new `embedded-web` Cargo feature flag (rust-embed + SPA fallback — `cargo build --features embedded-web` bundles the Next.js `out/` into the binary; OFF keeps the gateway headless + dashboard loads via `localhost:3000`). 10 NEW in-process smoke tests at [`crates/gateway/tests/v1_routes_smoke_test.rs`] cover health / changelog / faq / stream-format / vault-empty / manifest-empty / session-roundtrip / inference-401 / skills-empty / error-envelope shape. 16 NEW Rust files + `tower_0_5` workspace alias dev-dep (axum-0.8-compatible tower-http-style API surface).
 
 Full release notes in [`CHANGELOG.md`](CHANGELOG.md) `## v0.0.6 — 2026-07-15`.
@@ -345,6 +345,7 @@ pnpm verify:fix                  # LESSON-031 dual-check re-grep pattern
 | v0.2.0  |   3   | PLANNED  | Tiered inference (fast + slow reflection) + observability + 16-provider chain                                      |
 | v0.3.0  |   4   | PLANNED  | Mandatory Security Scanner + Two-Tier Agent System + Distributed Memory Substrate + Channels                      |
 | v0.4.0  |   5   | PLANNED  | Full UI shell (multi-pane dashboard + agent observability) + MCP + Windows DPAPI + release signing                 |
+| v0.0.8  |   1+  | PLANNED  | (TBD: scope for v0.0.8 — open candidates: FID-029 §Step 2-5 / FID-030 / FID-032 / FID-033 / FID-034 / FID-035) |
 
 Each phase lives as a FID under [`dev/fids/`](dev/fids/) as it ships.
 
