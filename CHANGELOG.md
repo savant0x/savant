@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+Work-in-progress against v0.0.9. Open candidates: (a) FID-029 §Step 2-5 (chat persistence renderer-side); (b) FID-030 (CLI scaffold); (c) FID-032 (api-client refactor); (d) FID-033 (Tauri repackaging to apps/tauri/); (e) FID-034 (kernel trait adoption); (f) FID-035 master-FID §Layered Build Order. Awaiting begin-ratification per LESSON-051.
+
+
+## v0.0.8 — 2026-07-15
+
 Work-in-progress against v0.0.9. Open candidates: (a) FID-029 §Step 8+ (chat persistence backend/SSE wiring); (b) FID-030 (CLI scaffold); (c) FID-032 (api-client refactor); (d) FID-033 (Tauri repackaging to apps/tauri/); (e) FID-034 (kernel trait adoption); (f) FID-037 (clippy proactive-policy restoration when clippy schema supports `[lints.clippy] except-cfg`). Awaiting begin-ratification per LESSON-051.
 
 ### Added (FID-029 §Steps 2–7 — Layer 1a chat persistence renderer-side, 2026-07-15)

@@ -10,7 +10,7 @@ A CLI-launched AI shell built on Next.js 15 + Rust. Phase 1 ships a renderer-fir
 <!-- BADGES_START -->
 <div align="center">
 
-[![React](https://img.shields.io/badge/React-19-%23000000?style=flat-square&logo=react&logoColor=%2300fbff)](https://react.dev/)[![Next.js](https://img.shields.io/badge/Next.js-15-%23000000?style=flat-square&logo=nextdotjs&logoColor=%2300fbff)](https://nextjs.org/)[![Rust](https://img.shields.io/badge/Rust-1.86+-%23000000?style=flat-square&logo=rust&logoColor=%2300fbff)](https://www.rust-lang.org/)[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-%23000000?style=flat-square&logo=typescript&logoColor=%2300fbff)](https://www.typescriptlang.org/)[![HeroUI](https://img.shields.io/badge/HeroUI-v3_Alpha-%23000000?style=flat-square&logo=react&logoColor=%2300fbff)](heroui.com/)[![License](https://img.shields.io/badge/License-Apache_2.0-%23000000?style=flat-square&logo=github&logoColor=%2300fbff)](LICENSE)[![Status](https://img.shields.io/badge/Status-v0.0.7_Released-%23000000?style=flat-square&color=brightgreen)](CHANGELOG.md)
+[![React](https://img.shields.io/badge/React-19-%23000000?style=flat-square&logo=react&logoColor=%2300fbff)](https://react.dev/)[![Next.js](https://img.shields.io/badge/Next.js-15-%23000000?style=flat-square&logo=nextdotjs&logoColor=%2300fbff)](https://nextjs.org/)[![Rust](https://img.shields.io/badge/Rust-1.86+-%23000000?style=flat-square&logo=rust&logoColor=%2300fbff)](https://www.rust-lang.org/)[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-%23000000?style=flat-square&logo=typescript&logoColor=%2300fbff)](https://www.typescriptlang.org/)[![HeroUI](https://img.shields.io/badge/HeroUI-v3_Alpha-%23000000?style=flat-square&logo=react&logoColor=%2300fbff)](heroui.com/)[![License](https://img.shields.io/badge/License-Apache_2.0-%23000000?style=flat-square&logo=github&logoColor=%2300fbff)](LICENSE)[![Status](https://img.shields.io/badge/Status-v0.0.8_Released-%23000000?style=flat-square&color=brightgreen)](CHANGELOG.md)
 
 </div>
 <!-- BADGES_END -->
@@ -20,7 +20,7 @@ A CLI-launched AI shell built on Next.js 15 + Rust. Phase 1 ships a renderer-fir
 ---
 
 <!-- WHATS_NEW_START -->
-## What's New in v0.0.7
+## What's New in v0.0.8
 
 - **`pnpm lint:docs`** [`scripts/lint-docs.sh`]: enforces the LESSON-027
   substring-match drift invariant (5 anchors across 4 source files
@@ -346,6 +346,7 @@ pnpm verify:fix                  # LESSON-031 dual-check re-grep pattern
 | v0.3.0  |   4   | PLANNED  | Mandatory Security Scanner + Two-Tier Agent System + Distributed Memory Substrate + Channels                      |
 | v0.4.0  |   5   | PLANNED  | Full UI shell (multi-pane dashboard + agent observability) + MCP + Windows DPAPI + release signing                 |
 | v0.0.8  |   1+  | PLANNED  | (TBD: scope for v0.0.8 — open candidates: FID-029 §Step 2-5 / FID-030 / FID-032 / FID-033 / FID-034 / FID-035) |
+| v0.0.9  |   1+  | PLANNED  | (TBD: scope for v0.0.9 — open candidates: FID-029 §Step 2-5 / FID-030 / FID-032 / FID-033 / FID-034 / FID-035) |
 
 Each phase lives as a FID under [`dev/fids/`](dev/fids/) as it ships.
 
