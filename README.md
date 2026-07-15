@@ -244,7 +244,7 @@ npx markdownlint-cli '**/*.md'   # Markdown lint
 | v0.0.3  |   1   | SHIPPED  | Soul Builder (FID-006 v3) + LLM streaming (FID-010) + swarm diff (FID-013) + Perfection Loop (FID-009)              |
 | v0.0.4  |   1   | SHIPPED  | Rust core restored (FID-016) + Reflections Viewer (FID-017) + lib rename (FID-016r2) + License MIT→Apache 2.0       |
 | v0.0.5  |   1   | SHIPPED  | Bundle identifier + Cargo crate/binary alignment to `savant` brand (boilerplate→Savant cutover continuation)            |
-| v0.0.6  |   1   | **NOW**  | Pre-pivot baseline + git release tooling (FID-022 LESSON-027/028/029/030/031 scripts) + cascade-recovery cycle codification (LESSON-053 + LESSON-054) + FID-031 gateway expansion foundation (Layer 0 of the strangler-fig sequence) |
+| v0.0.6  |   1   | SHIPPED  | Pre-pivot baseline + git release tooling (FID-022 LESSON-027/028/029/030/031 scripts) + cascade-recovery cycle codification (LESSON-053 + LESSON-054) + FID-031 gateway expansion foundation (Layer 0 of the strangler-fig sequence) |
 | v0.1.0  |   2   | PLANNED  | Trigger bus + hybrid tick + SQLite WAL + dual-loop init + Rust module split (trigger/, state/, cognitive/)         |
 | v0.2.0  |   3   | PLANNED  | Tiered inference (fast + slow reflection) + observability + 16-provider chain                                      |
 | v0.3.0  |   4   | PLANNED  | Mandatory Security Scanner + Two-Tier Agent System + Distributed Memory Substrate + Channels                      |
