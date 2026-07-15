@@ -30,9 +30,23 @@ Full release notes in [`CHANGELOG.md`](CHANGELOG.md) `## v0.0.5 — 2026-07-13`.
 
 <div align="center">
 
-[![React](https://img.shields.io/badge/React-19-%23000000?style=flat-square&logo=react&logoColor=%2300fbff)](https://react.dev/)[![Next.js](https://img.shields.io/badge/Next.js-15-%23000000?style=flat-square&logo=nextdotjs&logoColor=%2300fbff)](https://nextjs.org/)[![Tauri](https://img.shields.io/badge/Tauri-2.x-%23000000?style=flat-square&logo=tauri&logoColor=%2300fbff)](https://tauri.app/)[![Rust](https://img.shields.io/badge/Rust-1.86+-%23000000?style=flat-square&logo=rust&logoColor=%2300fbff)](https://www.rust-lang.org/)[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-%23000000?style=flat-square&logo=typescript&logoColor=%2300fbff)](https://www.typescriptlang.org/)[![HeroUI](https://img.shields.io/badge/HeroUI-v3_Alpha-%23000000?style=flat-square&logo=react&logoColor=%2300fbff)](https://heroui.com/)[![License](https://img.shields.io/badge/License-Apache_2.0-%23000000?style=flat-square&logo=github&logoColor=%2300fbff)](LICENSE)[![Status](https://img.shields.io/badge/Status-v0.0.5_Released-%23000000?style=flat-square&color=brightgreen)](CHANGELOG.md)
+[![React](https://img.shields.io/badge/React-19-%23000000?style=flat-square&logo=react&logoColor=%2300fbff)](https://react.dev/)[![Next.js](https://img.shields.io/badge/Next.js-15-%23000000?style=flat-square&logo=nextdotjs&logoColor=%2300fbff)](https://nextjs.org/)[![Tauri](https://img.shields.io/badge/Tauri-2.x-%23000000?style=flat-square&logo=tauri&logoColor=%2300fbff)](https://tauri.app/)[![Rust](https://img.shields.io/badge/Rust-1.86+-%23000000?style=flat-square&logo=rust&logoColor=%2300fbff)](https://www.rust-lang.org/)[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-%23000000?style=flat-square&logo=typescript&logoColor=%2300fbff)](https://www.typescriptlang.org/)[![HeroUI](https://img.shields.io/badge/HeroUI-v3_Alpha-%23000000?style=flat-square&logo=react&logoColor=%2300fbff)](https://heroui.com/)[![License](https://img.shields.io/badge/License-Apache_2.0-%23000000?style=flat-square&logo=github&logoColor=%2300fbff)](LICENSE)[![Status](https://img.shields.io/badge/Status-v0.0.6_Released-%23000000?style=flat-square&color=brightgreen)](CHANGELOG.md)
 
 </div>
+
+---
+
+## What's New in v0.0.6
+
+- **Git release tooling (FID-022 — LESSON-027/028/029/030/031 codified).** New `scripts/lint-docs.sh` enforces the doc-drift substring invariant (5 anchors + 1 cascade-prose alternation canonical only). New `scripts/release-check.sh` runs the 3-gate pre-flight (clean tree + 0 transient temp files + remote tag advisory). New `scripts/commit-with-message.sh` + `scripts/tag-with-message.sh` codify the file-based commit/tag pattern that avoids the multi-`-m` shell-escape brittleness for messages with backticks / em-dashes / UTF-8. New `scripts/verify-fix.sh` enforces the "re-grep after every fix" dual-check pattern. Codified in [`coding-standards/doc-drift-lint.md`](coding-standards/doc-drift-lint.md) + [`coding-standards/release-workflow.md`](coding-standards/release-workflow.md). Wired as `pnpm lint:docs` + `pnpm release:check` + `pnpm git:commit` + `pnpm git:tag` + `pnpm verify:fix`.
+
+- **Cascade-recovery cycle (LESSON-053 + LESSON-054 codified).** Closed the 2026-07-15 ECHO-brake cascade root cause via the 5-step BOOT CHECK pipeline + the LESSON-054 stale-session-transcript disposition (Locate + size-signal + untracked-verify, Read 0-EOF, Codify via LESSON if invariant, Document + BOOT CHECK 3 re-run). Cross-agent `dev/nova/{inbox,outbox}/` channel established for FIPA-style attribution-anchored audit sign-off per LESSON-008. Nova's `#1` + `#2` inbox verdicts preserved as audit trail.
+
+- **FID-031 (gateway expansion foundation, Layer 0 of the strangler-fig sequence).** 33 new `/v1/*` endpoints + 1 SSE handler + `embedded-web` feature flag at [`crates/gateway/`](crates/gateway/). The on-disk partial-impl is documented explicitly in the CHANGELOG (1 real impl + 6 stubs returning 501 NotImplemented + 1 SSE plumbing stub). The differential scheduled for follow-on FIDs (FID-029 Layer 1a will consume the `/v1/chat/*` family; FID-030 Layer 2 will spawn the CLI host). Per LESSON-027 doc-drift correction, the FID-031 CHANGELOG entry explicitly states the partial-impl reality, replacing the inflated "real impl + verified green" claim.
+
+- **Pre-pivot baseline for v0.0.7 architectural work.** Captures the post-cascade-recovery state (recovery artifacts + WIP scaffold for FID-028 + FID-022 / 026 LESSON tooling + 6-file version-bump in lockstep). The strangler-fig Tauri → CLI architecture begins in v0.0.7+ per master-FID-035 §Layered Build Order (foundation → renderer → CLI → API swap → optional shell → kernel abstractions). 6 open FIDs (029 / 030 / 032 / 033 / 034 + master-FID-035) await Spencer's begin-ratification per LESSON-051.
+
+Full release notes in [`CHANGELOG.md`](CHANGELOG.md) `## v0.0.6 — 2026-07-15`. FID scaffold in [`dev/fids/`](dev/fids/).
 
 ---
 
@@ -229,7 +243,8 @@ npx markdownlint-cli '**/*.md'   # Markdown lint
 | v0.0.2  |   1   | SHIPPED  | Auto-derived session key (FID-0003) + two-tier credential + vitest/Playwright test framework                        |
 | v0.0.3  |   1   | SHIPPED  | Soul Builder (FID-006 v3) + LLM streaming (FID-010) + swarm diff (FID-013) + Perfection Loop (FID-009)              |
 | v0.0.4  |   1   | SHIPPED  | Rust core restored (FID-016) + Reflections Viewer (FID-017) + lib rename (FID-016r2) + License MIT→Apache 2.0       |
-| v0.0.5  |   1   | **NOW**  | Bundle identifier + Cargo crate/binary alignment to `savant` brand (boilerplate→Savant cutover continuation)            |
+| v0.0.5  |   1   | SHIPPED  | Bundle identifier + Cargo crate/binary alignment to `savant` brand (boilerplate→Savant cutover continuation)            |
+| v0.0.6  |   1   | **NOW**  | Pre-pivot baseline + git release tooling (FID-022 LESSON-027/028/029/030/031 scripts) + cascade-recovery cycle codification (LESSON-053 + LESSON-054) + FID-031 gateway expansion foundation (Layer 0 of the strangler-fig sequence) |
 | v0.1.0  |   2   | PLANNED  | Trigger bus + hybrid tick + SQLite WAL + dual-loop init + Rust module split (trigger/, state/, cognitive/)         |
 | v0.2.0  |   3   | PLANNED  | Tiered inference (fast + slow reflection) + observability + 16-provider chain                                      |
 | v0.3.0  |   4   | PLANNED  | Mandatory Security Scanner + Two-Tier Agent System + Distributed Memory Substrate + Channels                      |
