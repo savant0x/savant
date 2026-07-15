@@ -1,0 +1,31 @@
+[package]
+name = "savant_cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+description = "Savant CLI runtime host (FID-030 Layer 2 Strangler-Fig migration — ZeroClaw pattern: in-process gateway + dashboard orchestration)"
+readme = "README.md"
+
+[lib]
+name = "savant_cli"
+path = "src/lib.rs"
+
+[[bin]]
+name = "savant-cli"
+path = "src/main.rs"
+
+[dependencies]
+# FID-030 §Step 1 uses ONLY workspace-inherited deps per ECHO Law 7.
+# clap — CLI parsing (derive-side parsed subcommand enums).
+# thiserror — typed SavantCliError per coding-standards/rust.md.
+# tracing — observability; tracing-subscriber init lands in §Step 4.
+clap = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+# NOTE: savant_runtime and savant_gateway are intentionally NOT
+# declared at §Step 1. They land as deps in §Step 4 (full runtime
+# boot) per the FID's progressive §Step enumeration. This keeps
+# §Step 1 focused on the binary scaffold + clap parsing contract.

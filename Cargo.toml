@@ -22,9 +22,9 @@ members = [
     "crates/echo",
     "crates/browser",
     "crates/toolforge",
-    "crates/generation",
-    "crates/schema",
-]
+    "crates/generation",    "crates/schema",
+    "crates/cli",
+]  
 
 [workspace.package]
 version = "0.0.8"
@@ -122,6 +122,7 @@ candle-nn = "0.8.0"
 
 # Utility
 ctrlc = "3.4"
+clap = { version = "4", features = ["derive"] }
 xxhash-rust = { version = "0.8", features = ["xxh3"] }
 opentelemetry = "0.21"
 opentelemetry_sdk = { version = "0.21", features = ["rt-tokio"] }
