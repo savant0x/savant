@@ -213,4 +213,25 @@ Per LESSON-008 (Cross-Agent Claim Rule / attribution ≠ source), the **agent cl
 
 **Codified by:** Savant (2026-07-15) via Spencer's verbatim disposition: *"so there was not even a leak"* — anchoring GH13's pattern-match concern to the on-disk literal context rather than the credential-rotation reflex.
 
+### LESSON-058: Relaxed Commit-Subject Length Discipline (72 canonical to 100 soft cap)
+
+**Date:** 2026-07-15
+**Trigger:** Spencer's "expand the 75char limit" session directive (2026-07-15). The v0.0.6 close-out commit `e464a08` had a 75-char subject that violated LESSON-030's <=72-char hard limit.
+**Lesson:** Relax the 72-char hard limit to a **100-char SOFT cap**. <=72 canonical best-practice (conventional-commits readability + HEREDOC shell-escape brittleness) is preserved; 73-100 chars accepted WITHOUT preflight failure. **>100 chars = ERROR** (rejects before commit per LESSON-030's preflight philosophy).
+**Permitted (no extension):**
+- Commit subjects <=72 chars accepted silently (canonical best-practice).
+- 73-100 chars accepted with `[WARN]` (audit-trail of deviation; commit succeeds).
+- >100 chars REJECTED with exit 1 (hard cap; typo / laziness guard).
+**Not permitted:**
+- Treating >72 chars as the new canonical best-practice. 72 is still the target; 100 is the soft cap.
+- Removing the WARN entirely -- preserves the 72-char preference + the audit trail.
+- Extending >100 to >120 to accommodate a single specific commit. Per LESSON-030, if a subject can't fit in 100 chars, split it into a multi-line body.
+**Pattern (canonical doctrine):**
+1. **Pre-write:** measure subject length BEFORE writing the commit message file.
+2. **Pre-flight (commit-with-message.sh):** `SUBJECT_LEN <= 100` (exit 1 if exceeded); `SUBJECT_LEN > 72` emits soft `[WARN]` (no exit).
+3. **Audit (Perfection Loop):** future FID-XXX `scripts/check-commit-subject-length.sh` CI check that asserts last 10 commits' subjects <=100 chars.
+**Enforcement + tooling:** `scripts/commit-with-message.sh` enforces <=100-char hard fail + >72-char soft warn (updated 2026-07-15).
+**Anti-pattern (the 75-char incident):** v0.0.6 close-out commit `e464a08` is 75 chars (3 over the 72-char canonical). LESSON-030's preflight rejected the multi-`-m` shell pattern; the agent's fallback was the file-based pattern. The trigger for LESSON-058.
+**Cross-references:** LESSON-030 (the file-based pattern); `scripts/commit-with-message.sh`; Spencer's session directive 2026-07-15; `coding-standards/release-workflow.md` Relaxed Subject-Length Discipline section.
+
 <!-- Add new entries above this line -->

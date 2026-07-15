@@ -10,6 +10,7 @@ USAGE
     python scripts/release.py --dry-run          # Show what would happen
     python scripts/release.py --update           # Update existing release notes
     python scripts/release.py --skip-tag         # Don't create/push a tag (already exists)
+    python scripts/release.py --skip-refresh     # Don't auto-refresh README.md (the new default does)
     python scripts/release.py --repo OWNER/REPO  # Override target GitHub repo slug
     python scripts/release.py --help             # Show usage
 
@@ -18,8 +19,10 @@ WHAT IT DOES
     2. Validate VERSION file
     3. Extract release notes for this version from CHANGELOG.md
     4. Resolve target REPO_SLUG (default: savant0x/Savant; --repo override)
-    5. Create + push git tag (unless --skip-tag; uses git origin, not REPO_SLUG)
-    6. Create or update GitHub release on REPO_SLUG via the REST API
+    5. Auto-refresh README.md (via scripts/refresh-readme.sh) — skip with --skip-refresh
+    6. Auto-commit any README diff as `docs(readme): auto-refresh for vX.Y.Z`
+    7. Create + push git tag (unless --skip-tag; uses git origin, not REPO_SLUG)
+    8. Create or update GitHub release on REPO_SLUG via the REST API
 
 REQUIREMENTS
     - git on PATH
@@ -270,6 +273,11 @@ def main() -> int:
     ap.add_argument("--update", action="store_true", help="Update notes on an existing release (no tag changes)")
     ap.add_argument("--skip-tag", action="store_true", help="Don't create/push a git tag")
     ap.add_argument(
+        "--skip-refresh",
+        action="store_true",
+        help="Don't auto-refresh README.md via scripts/refresh-readme.sh (default: refreshed). Use this if the README is already up to date for this version.",
+    )
+    ap.add_argument(
         "--repo",
         default=DEFAULT_REPO_SLUG,
         help=f"GitHub repo slug for the GitHub Release API call (default: {DEFAULT_REPO_SLUG}). git tag push still goes to the local remote (origin).",
@@ -309,6 +317,57 @@ def main() -> int:
 
     if not PROTOCOL_ROOT.joinpath("CHANGELOG.md").exists():
         return fail("CHANGELOG.md missing")
+
+    # ── Step 5 (NEW, codifies Spencer's 2026-07-15 README-auto-update directive):
+    # Auto-refresh README.md before tagging so the GitHub release page + the repo's
+    # README.md badge are in lockstep. The refresh script enforces the LESSON-058
+    # semver-guard + the LESSON-027 single-latest rule; its output is committed
+    # atomically as `docs(readme): auto-refresh for vX.Y.Z` (LESSON-030 file-based).
+    if not args.skip_refresh:
+        header("Refresh README.md")
+        refresh_script = PROTOCOL_ROOT / "scripts" / "refresh-readme.sh"
+        if not refresh_script.exists():
+            return fail(f"scripts/refresh-readme.sh not found at {refresh_script}")
+        refresh_result = subprocess.run(
+            ["bash", str(refresh_script), version],
+            cwd=PROTOCOL_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if refresh_result.returncode != 0:
+            print(refresh_result.stdout)
+            print(refresh_result.stderr, file=sys.stderr)
+            return fail(f"refresh-readme.sh failed (exit {refresh_result.returncode}); see error above")
+        print(refresh_result.stdout)
+        ok(f"README.md refreshed for v{version}")
+        # Commit the README diff atomically if it changed (LESSON-030 file-based pattern)
+        diff_check = git("diff", "--quiet", "README.md", check=False)
+        if diff_check.returncode != 0:
+            git("add", "README.md", check=False)
+            tmp_msg = PROTOCOL_ROOT / "dev" / f".tmp-readme-refresh-{version}.txt"
+            tmp_msg.write_text(
+                f"docs(readme): auto-refresh for v{version}\n\n"
+                f"Auto-regenerated badges + single-latest ## What's New + Architecture\n"
+                f"status column via scripts/refresh-readme.sh. Codifies Spencer's\n"
+                f"2026-07-15 README-auto-update directive (badges at top,\n"
+                f"single-latest rule, auto-update on release). Cross-ref: LESSON-058\n"
+                f"(relaxed commit-subject limit) + scripts/refresh-readme.sh.\n",
+                encoding="utf-8",
+            )
+            commit_result = subprocess.run(
+                ["git", "commit", "-F", str(tmp_msg)],
+                cwd=PROTOCOL_ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            tmp_msg.unlink(missing_ok=True)
+            if commit_result.returncode != 0:
+                print(commit_result.stdout)
+                print(commit_result.stderr, file=sys.stderr)
+                return fail(f"Failed to auto-commit README refresh (exit {commit_result.returncode})")
+            ok(f"Auto-committed README refresh (commits ahead: +1)")
 
     header("Extract Release Notes")
     notes = extract_release_notes(version)

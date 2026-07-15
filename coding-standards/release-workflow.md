@@ -156,6 +156,34 @@ the user (or agent) MUST `rm -f` the temp message files BEFORE
 running `release.py`, because `release.py` requires a clean tree.
 The `release-check.sh` Gate 2 enforces this automatically.
 
+### Relaxed Subject-Length Discipline (LESSON-058)
+
+The strict <=72-char hard limit from LESSON-030's preflight was relaxed
+to a **100-char SOFT cap** with a **>100-char HARD FAIL** per Spencer's
+"expand the 75char limit" directive (2026-07-15). The trigger was the
+v0.0.6 close-out commit `e464a08` at 75 chars.
+
+**Three-tier rule:**
+
+| Subject length | Behavior | Codified by |
+| :--- | :--- | :--- |
+| **<= 72 chars** | **Canonical** (no warning, conventional-commits readability) | LESSON-030 |
+| **73-100 chars** | **Soft cap** (`[WARN]` only; commit succeeds) | LESSON-058 |
+| **> 100 chars** | **Hard cap** (HARD FAIL exit 1; rewrite the subject) | LESSON-058 |
+
+**Rationale:** The 72-char best-practice is preserved (conventional-commits
+readability + HEREDOC shell-escape brittleness avoidance). But accepting
+73-100 chars accommodates the realistic case where a subject needs a
+slightly-longer FID-ID + scope + summary. The 100-char hard cap stays
+the typo / laziness guard.
+
+**Tooling:** `scripts/commit-with-message.sh` enforces the three-tier
+rule via the `SUBJECT_LEN` checks (updated 2026-07-15). A future
+FID-XXX could add `scripts/check-commit-subject-length.sh` for
+`pnpm lint:ci` CI enforcement.
+
+**Cross-references:** LESSON-030 (the file-based pattern); LESSON-058 (the relaxed limit); `scripts/commit-with-message.sh`; the v0.0.6 close-out commit `e464a08`.
+
 ## Checkpoint Release Discipline (Build-Freely + Push-at-Release)
 
 **Codified 2026-07-14** per Spencer's meta-policy directive: the project

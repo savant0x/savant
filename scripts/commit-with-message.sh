@@ -64,8 +64,15 @@ if [ -z "$SUBJECT" ]; then
 fi
 # Conventional-commits sanity check: subject length + non-leading-whitespace.
 SUBJECT_LEN=${#SUBJECT}
-if [ "$SUBJECT_LEN" -gt 72 ]; then
-    echo "[WARN] Subject is $SUBJECT_LEN chars (> 72); conventional-commits recommends <= 72." >&2
+# LESSON-058 relaxed limit: <=72 canonical, <=100 SOFT cap, >100 HARD FAIL.
+if [ "$SUBJECT_LEN" -gt 100 ]; then
+    echo "[FAIL] Subject is $SUBJECT_LEN chars (> 100); HARD CAP per LESSON-058 exceeded." >&2
+    echo "        LESSON-058: 72 = canonical best-practice; 100 = soft cap; >100 = REJECTED." >&2
+    echo "        Fix: rewrite the subject shorter; split long bodies into the multi-line '## Body' section per LESSON-030." >&2
+    echo "        Subject: $SUBJECT" >&2
+    exit 1
+elif [ "$SUBJECT_LEN" -gt 72 ]; then
+    echo "[WARN] Subject is $SUBJECT_LEN chars (> 72 canonical; soft cap is 100 per LESSON-058)." >&2
     echo "        Subject: $SUBJECT" >&2
 fi
 if [[ "$SUBJECT" =~ ^[[:space:]] ]]; then
