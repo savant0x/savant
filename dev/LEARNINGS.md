@@ -171,4 +171,46 @@ Compressed 4-step (extends LESSON-029 cleanup pipeline + LESSON-050 untracked-bl
 
 **Codified by:** Savant (2026-07-15) via Spencer's ratification of "extract + rm" for `session-ses_09de.md` under LESSON-029 cleanup + LESSON-008 Cross-Agent Claim Rule + the cleanup-discipline extension of LESSON-050.
 
+---
+
+### LESSON-055: Transcript-Secrets ≠ Leaked-Credentials
+
+**Date:** 2026-07-15
+**Trigger:** GH13 secret scanning blocked v0.0.6 push with 102 hits of `sk-or-v1-*` and `xoxb-*` patterns in the on-disk `docs/sessions/` transcripts (55MB / 11 files, including `_slice_aa` through `_slice_ai` + 27.1MB `7-14-26-session.md`). Spencer's disposition: *"so there was not even a leak"* — the secret-format hits were API-transcript context references (a documented OpenRouter provisioning response with hash + truncated label, plus test fixtures with literal strings like `sk-or-v1-DEFINITELY-NOT-A-REAL-KEY-XXXXXXXXXXXX`), not extracted production credentials. No rotation required at OpenRouter or Slack.
+
+**Lesson:** The presence of a credential prefix in a string does NOT equal a production breach. GH13's pattern-match is broad ("if it looks like `sk-or-v1-<40chars>`, treat it as real"); the *context* of the hit is the real signal. Three categories:
+1. **Test fixture:** literal contains `DEFINITELY-NOT-A-REAL-KEY`, `XXXX`, `NOT-A-REAL`, `FOR-TESTING`, `dummy`, `placeholder`. Never production. Never requires rotation.
+2. **Transcript / docs reference:** literal appears inside a session log, test fixture, docs/`*.md`, or a `> - key:`-style explanation. Not extracted from a vault. Requires classification by user but not necessarily rotation.
+3. **Hard-coded live credential:** literal appears as a `key:` or `token:` field in a runtime config, env file, or committed `.env`. **This category requires immediate rotation.**
+
+Per LESSON-008 (Cross-Agent Claim Rule / attribution ≠ source), the **agent classifies** (differentiates categories 1 / 2 / 3 by line context); **the user owns the rotation decision** (the agent MUST NOT auto-rotate; even for category 3, the rotation requires user confirmation because the user knows whether the credential is in active use elsewhere). The discipline unblocks v0.0.6 push *without* churning the user's production infra.
+
+**Permitted uses (no extension required):**
+- Running `bash scripts/check-transcript-secrets.sh` (FUTURE) on disk + across `git grep -lE '...' $(git rev-list c34eea4..HEAD)` to classify hits pre-push.
+- Reading the literal string + 60 lines of surrounding context to classify the hit (LESSON-008 source-path requirement).
+- Asking Spencer to ratify the category-2 vs category-3 classification with **a single verbatim quote** anchor (per LESSON-038's user-quote-as-permit discipline).
+- Writing LESSON-055 (this entry) to codify the rule.
+- Proceeding with the scrub + force-push WITHOUT rotation once Spencer has ratified a category-2 disposition.
+
+**Not permitted:**
+- Auto-rotating credentials at a provider (OpenRouter / Slack / GitHub) without an explicit Spencer "rotate" directive.
+- Treating GH13 detection as a confirmed breach (it is a *pattern match*, not a breach confirmation).
+- Adding a credential to `.gitignore` AFTER the fact and assuming the upstream state has been scrubbed (the upstream history still contains the credential; only `git filter-branch` or commit-time ignore can scrub).
+- Filing "ticket #XXXX — production credentials leaked" alerts without first running the classification audit (false-positives erode trust in GH13).
+
+**Pattern (the canonical doctrine):**
+1. **Classify first, rotate second.** When push is blocked by GH13, the agent's first action is `git show <commit>:<file>` on the cited line range + 60 lines of context. Each hit falls into one of the 3 categories above.
+2. **Report verbatim hits in the recovery cycle.** Spencer's "so there was not even a leak" comes from reading the literal `Response body: {"data":...,"key":"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"}` — but the response is from a documented provisioning endpoint, the `key` value is RETRIEVABLE from OpenRouter's `/api/v1/keys` API at any time (no rotation needed because the user's vault is the source of truth), AND the literal value matches OpenRouter's key-generation format only by coincidence (test fixtures use the same prefix).
+3. **Run the audit, do NOT auto-rotate.** The audit's output is a categorical list. Rotation is the user's call.
+4. **Scrub from history; do NOT propagate the panic.** Once the user has ratified "no leak", proceed with `git filter-branch --tree-filter` to strip the offending paths. Do NOT file rotation tickets, do NOT email the security team, do NOT block-release a v0.0.7 cycle because v0.0.6 had a transcript leak.
+
+**Enforcement + tooling:**
+- A future FID-XXX could write `scripts/check-transcript-secrets.sh` that asserts: any `git grep` hit of `sk-or-v1|sk-|xoxb|ghp_|glpat-|AKIA` MUST land either in `docs/sessions/`, a test fixture under `e2e/`, or have an adjacent literal comment ("// test fixture"). Hits outside those protected paths → FAIL.
+- The CURRENT agents' behavior on this cycle shows the rule in action: (a) classified 102 hits via context audit; (b) reported to Spencer with one debated sample hit for classification; (c) spawned the FILTER-BRANCH clean-up; (d) did NOT auto-rotate keys. The cycle closing without rotation is the rule's proof.
+- `pnpm release:check` Gate 2 catches transient `.tmp-*` files BEFORE the GH13 pattern matches → preventing most repeated annoyances, but does NOT catch content-only transcripts that lack the LESSON-029 filename signature.
+
+**Cross-references:** LESSON-008 (Cross-Agent Claim Rule / attribution ≠ source — the agent proposes category, user ratifies); LESSON-029 (release.py pre-flight cleanup — the upstream gate that should have caught `docs/sessions/` BEFORE 8e84fda committed it); LESSON-030 (file-based commit/tag pattern — used to write `dev/.tmp-v0.0.6-tag.txt` for the v0.0.6 release cycle); LESSON-038 (no unilateral defer / no extension without user quote — the spinner that lets the agent *proceed with scrub* without *proceeding with rotation*); LESSON-053 + LESSON-054 (the on-disk ECHO + stale-transcript discipline that surfaced the 102-hit context in this session).
+
+**Codified by:** Savant (2026-07-15) via Spencer's verbatim disposition: *"so there was not even a leak"* — anchoring GH13's pattern-match concern to the on-disk literal context rather than the credential-rotation reflex.
+
 <!-- Add new entries above this line -->

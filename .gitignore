@@ -102,3 +102,4 @@ master_key.json
 
 # Local Rust build cache
 .cargo/
+/docs/sessions/
