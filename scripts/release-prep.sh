@@ -171,7 +171,7 @@ echo "[APPLY MODE] Committing + pushing main + delegating tag + GH release to re
 echo ""
 
 # Write commit msg file (LESSON-030 file-based pattern)
-MSG_FILE="dev/.tmp-v${TARGET}-release.txt"
+MSG_FILE="/tmp/.tmp-v${TARGET}-release.txt"
 cat > "$MSG_FILE" <<EOF
 chore(release): v${TARGET} — orchestrator validation run
 
