@@ -12,20 +12,29 @@ readme = "README.md"
 name = "savant_cli"
 path = "src/lib.rs"
 
+# §Step 2: bin name is `savant` per FID-030 spec verbatim. §Step 1 used
+# `savant-cli`; the spec's §Subcommand Tree example derives a `Cli` struct
+# with `#[command(name = "savant", ...)]`, and the §Steps section §Step 13
+# smoke test confirms `cargo run --bin savant --help` is the canonical
+# invocation. `pnpm savant` (added at §Step 6 per spec §Impact Assessment)
+# will use `cargo run --bin savant --`.
 [[bin]]
-name = "savant-cli"
+name = "savant"
 path = "src/main.rs"
 
 [dependencies]
-# FID-030 §Step 1 uses ONLY workspace-inherited deps per ECHO Law 7.
-# clap — CLI parsing (derive-side parsed subcommand enums).
-# thiserror — typed SavantCliError per coding-standards/rust.md.
-# tracing — observability; tracing-subscriber init lands in §Step 4.
+# FID-030 §Step 2 still uses ONLY workspace-inherited deps per LESSON-038
+# (no-unilateral-defer) + LESSON-062 (path discipline). Each new
+# dependency lands in the §Step that actually needs it:
+#   - clap (parser) — wired at §Step 1
+#   - thiserror (typed errors) — wired at §Step 1
+#   - tracing (observability; tracing-subscriber init lands in §Step 4)
+#   - tokio (async runtime + tokio::spawn for in-process gateway) — landed
+#     via `[workspace.dependencies].tokio` (already present); crate-level
+#     re-declaration comes in §Step 4
+#   - webbrowser — wired at §Step 7 (browser orchestration)
+#   - ctrlc — already a workspace dep; crate-level use at §Step 5
+#   - nix (Unix signals) — wired at §Step 5 + §Step 12
 clap = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
-
-# NOTE: savant_runtime and savant_gateway are intentionally NOT
-# declared at §Step 1. They land as deps in §Step 4 (full runtime
-# boot) per the FID's progressive §Step enumeration. This keeps
-# §Step 1 focused on the binary scaffold + clap parsing contract.
