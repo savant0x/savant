@@ -38,3 +38,13 @@ path = "src/main.rs"
 clap = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
+
+# §Step 4: tokio for the runtime host (process spawn + net probes +
+# signal handling). Workspace `tokio = { version = "1.0", features =
+# ["full"] }` includes `process`, `net`, `signal` (incl
+# `tokio::signal::ctrl_c`).
+tokio = { workspace = true }
+
+# §Step 4: webbrowser for the dev-mode browser launch (spec §Step 10).
+# Cross-platform via v0.8: Windows=ShellExecute, macOS=`open`, Linux=`xdg-open`.
+webbrowser = "0.8"

@@ -123,6 +123,7 @@ candle-nn = "0.8.0"
 # Utility
 ctrlc = "3.4"
 clap = { version = "4", features = ["derive"] }
+webbrowser = "0.8"
 xxhash-rust = { version = "0.8", features = ["xxh3"] }
 opentelemetry = "0.21"
 opentelemetry_sdk = { version = "0.21", features = ["rt-tokio"] }

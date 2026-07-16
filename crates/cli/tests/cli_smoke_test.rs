@@ -170,9 +170,15 @@ fn test_unknown_subcommand_fails_to_parse() {
 fn test_savant_cli_error_exit_code_stable_mapping() {
     // Stable mapping per FID-030 verifier-pass convention: distinct
     // exit codes per variant so CI scripts can branch on failure mode.
+    // §Step 4 extended: Port=13, Signal=14, Spawn=15; Browser falls back to 1
+    // (best-effort UX failure, same as Other).
     assert_eq!(SavantCliError::RuntimeInit("x".into()).exit_code(), 10);
     assert_eq!(SavantCliError::GatewayBoot("x".into()).exit_code(), 11);
     assert_eq!(SavantCliError::Dashboard("x".into()).exit_code(), 12);
+    assert_eq!(SavantCliError::Port("x".into()).exit_code(), 13);
+    assert_eq!(SavantCliError::Signal("x".into()).exit_code(), 14);
+    assert_eq!(SavantCliError::Spawn("x".into()).exit_code(), 15);
+    assert_eq!(SavantCliError::Browser("x".into()).exit_code(), 1);
     assert_eq!(SavantCliError::Other("x".into()).exit_code(), 1);
 }
 

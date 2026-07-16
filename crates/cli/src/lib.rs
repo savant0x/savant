@@ -42,6 +42,7 @@
 
 pub mod cli;
 pub mod commands;
+pub mod runtime_helpers;
 
 // Re-exports from `cli` (callers + tests use these from `savant_cli::*`).
 pub use cli::{Cli, Command, MemoryAction, VaultAction};
@@ -71,6 +72,27 @@ pub enum SavantCliError {
     #[error("dashboard orchestration: {0}")]
     Dashboard(String),
 
+    /// Port negotiation failed -- all +0..+9 fallback candidates
+    /// are bound (FID-030 §Step 4 `port::negotiate_port`).
+    #[error("port negotiation: {0}")]
+    Port(String),
+
+    /// OS signal handling failed -- `tokio::signal::ctrl_c()` error
+    /// (FID-030 §Step 4 `signal::wait_for_shutdown`).
+    #[error("signal handling: {0}")]
+    Signal(String),
+
+    /// Child-process spawn or tree-kill failed (FID-030 §Step 4
+    /// `process::{spawn_npx, kill_process_tree, wait_for_http}`).
+    #[error("process spawn/kill: {0}")]
+    Spawn(String),
+
+    /// Default-browser launch failed -- non-fatal UX failure; caller
+    /// should log + print URL for manual open (FID-030 §Step 4
+    /// `browser::open_browser`).
+    #[error("browser open: {0}")]
+    Browser(String),
+
     /// Catch-all for unforeseen propagated errors.
     #[error("savant-cli error: {0}")]
     Other(String),
@@ -78,11 +100,25 @@ pub enum SavantCliError {
 
 impl SavantCliError {
     /// Stable exit-code mapping (FID-030 §Verifier Pass convention).
+    ///
+    /// §Step 4 mapping (extended):
+    /// - 10: RuntimeInit
+    /// - 11: GatewayBoot
+    /// - 12: Dashboard
+    /// - 13: Port
+    /// - 14: Signal
+    /// - 15: Spawn
+    /// - 1: Browser (best-effort UX failure; falls back to manual URL)
+    /// - 1: Other
     pub fn exit_code(&self) -> u8 {
         match self {
             SavantCliError::RuntimeInit(_) => 10,
             SavantCliError::GatewayBoot(_) => 11,
             SavantCliError::Dashboard(_) => 12,
+            SavantCliError::Port(_) => 13,
+            SavantCliError::Signal(_) => 14,
+            SavantCliError::Spawn(_) => 15,
+            SavantCliError::Browser(_) => 1,
             SavantCliError::Other(_) => 1,
         }
     }
