@@ -44,6 +44,30 @@ savant -v / -vv / -vvv ...                   # short-form tracing-subscriber ver
 savant --verbose ...                   # long form; counts per occurrence (clap `ArgAction::Count`)
 ```
 
+## §Step 3 Module Structure (module split per FID-030 spec §Step 3)
+
+```text
+crates/cli/src/
+├── lib.rs                  # entry: SavantCliError + exit_code() + run() +
+│                           #   `pub mod cli;` + `pub mod commands;` +
+│                           #   `pub use cli::{Cli, Command, MemoryAction, VaultAction};`
+├── cli.rs                  # clap definitions (Cli + Command + MemoryAction +
+│                           #              VaultAction); §Step 2's lib.rs enums
+│                           #              migrated here at §Step 3
+├── commands/
+│   └── mod.rs              # subcommand dispatcher (`commands::dispatch(&Cli)`);
+│                           # per-subcommand handler modules
+│                           # (`commands::{dev,chat,memory,vault,doctor}::handle`)
+│                           # land at:
+│                           #   · commands::dev::handle     — §Step 4
+│                           #   · commands::chat::handle    — §Step 11 (stub)
+│                           #   · commands::memory::handle  — §Step 11 (stub)
+│                           #   · commands::vault::handle   — §Step 11 (stub)
+│                           #   · commands::doctor::handle  — §Step 11 (stub)
+└── main.rs                 # `fn main() → ExitCode` thin wrapper around
+                            # `savant_cli::run()`
+```
+
 ## Exit-code Stability (FID-030 §Verifier Pass convention)
 
 | `SavantCliError` variant | Exit code | Trigger |
