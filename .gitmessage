@@ -1,0 +1,5 @@
+# <type>(<scope>): <description> (<FID-ID>)
+#
+# types: feat | fix | refactor | test | docs | chore | perf
+# imperative lowercase subject, <=72 chars
+# FID reference mandatory when an FID drove the change

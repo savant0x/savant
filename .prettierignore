@@ -1,0 +1,14 @@
+node_modules/
+dist/
+bun.lock
+bun.lockb
+resources/
+Savant-orig-backup/
+dev/fids/archive/
+dev/session-summaries/
+*.log
+ECHO.md
+echo-v0.1.2-single-agent.md
+templates/
+coding-standards/
+package-lock.json

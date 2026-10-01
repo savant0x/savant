@@ -1,0 +1,31 @@
+{
+  "name": "savant",
+  "version": "0.0.1",
+  "description": "Savant — a proactive digital being, not an assistant.",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "bun": ">=1.3"
+  },
+  "scripts": {
+    "build": "bun build --target=bun src/index.ts --outdir dist",
+    "test": "bun test ./src --timeout 30000",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:md": "markdownlint-cli2 \"**/*.md\" \"#resources\" \"#Savant-orig-backup\"",
+    "format:check": "prettier --check .",
+    "format:write": "prettier --write .",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.37.0",
+    "@types/bun": "^1.4.2",
+    "eslint": "^9.37.0",
+    "globals": "^16.4.0",
+    "markdownlint-cli2": "^0.19.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.0"
+  }
+}

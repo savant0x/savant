@@ -1,0 +1,29 @@
+{
+  "config": {
+    "default": true,
+    "MD013": {
+      "line_length": 100,
+      "code_blocks": false,
+      "tables": false,
+      "headings": false,
+    },
+    "MD024": { "siblings_only": true },
+    "MD029": { "style": "ordered" },
+    "MD033": false,
+    "MD041": false,
+    "MD060": false,
+  },
+  "ignores": [
+    "**/node_modules/**",
+    "resources/**",
+    "Savant-orig-backup/**",
+    "dist/**",
+    "dev/fids/archive/**",
+    "dev/session-summaries/**",
+    "ECHO.md",
+    "echo-v0.1.2-single-agent.md",
+    "templates/**",
+    "coding-standards/**",
+  ],
+  "globs": ["*.md", "dev/**/*.md", "docs/**/*.md"],
+}

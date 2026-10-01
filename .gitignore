@@ -1,0 +1,22 @@
+.env
+.env.local
+.env.*.local
+.savant/
+
+# Local runtime state
+journal/
+.freebuff/
+
+# Vendored reference material — read-only evidence from prior and peer projects; excluded
+# from git, lint, test discovery, and every tooling glob (required for gates to function)
+resources/
+Savant-orig-backup/
+
+# Unpublished research notes — kept local, excluded from the public repo
+docs/research/
+node_modules/
+dist/
+build/
+.DS_Store
+Thumbs.db
+*.log

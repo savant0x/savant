@@ -1,0 +1,150 @@
+# Protocol Config — Savant root TypeScript project
+# Governing single-agent document: echo-v0.1.2-single-agent.md
+# FID template: docs/FID-TEMPLATE.md (operator-selected location).
+# This file declares policy and command contracts; YAML alone does not enforce them.
+# Root package scripts provide compiler, test, quality and FID verification gates.
+
+project:
+  name: 'savant'
+  description: 'Not an ai assistant, a digital being.'
+  version: '0.0.1'
+
+# Harness identity belongs to ECHO.md; single-agent sessions use the block below.
+protocol:
+  version: '0.2.0'
+  strict_mode: true # Core laws always apply; autonomous runs require all 15 laws.
+
+language: 'typescript'
+
+# Required root package.json scripts. Missing scripts must fail, never be skipped.
+# --no-install prevents dependency auto-install during verification.
+# typecheck must run strict compiler checks; lint must honor --max-warnings 0.
+# lint, lint:md, and format:check must check without rewriting project files.
+commands:
+  build: 'bun run --no-install build'
+  test: 'bun run --no-install test'
+  type_check: 'bun run --no-install typecheck'
+  lint: 'bun run --no-install lint --max-warnings 0'
+  lint_md: 'bun run --no-install lint:md'
+  format: 'bun run --no-install format:check'
+  clean: 'bun run --no-install clean' # Explicit maintenance only; never a verification gate.
+
+# Root library and verification layout; product application scaffolding is separate.
+paths:
+  src: 'src/'
+  tests: 'tests/'
+  docs: 'docs/'
+  dev: 'dev/'
+  fids: 'dev/fids/'
+  fids_archive: 'dev/fids/archive/'
+  session_summaries: 'dev/session-summaries/'
+  learnings: 'dev/LEARNINGS.md'
+
+# Quality policy for project-owned TypeScript/TSX, including tests.
+# Enforcement requires the root compiler, linter, and quality-report tooling.
+# Law 6 requires actual domain types and trust-boundary type guards; no any,
+# unknown parameter/return/variable types, or @ts-ignore shortcuts.
+quality:
+  max_file_lines: 300
+  max_function_lines: 50
+  max_line_length: 100
+  max_complexity: 10
+  max_params: 4
+  max_comment_density: 0.33
+  max_nesting_depth: 3
+
+# Testing policy; coverage requires an explicitly configured coverage gate.
+# Fuzzing and mutation testing remain disabled; neither is claimed as verified.
+testing:
+  fuzz_enabled: false
+  mutation_enabled: false
+  coverage_threshold: 80
+  test_timeout: 30
+  parallel_tests: true
+
+# FID policy; these values do not create records or enforce queue limits alone.
+# Use docs/FID-TEMPLATE.md and scan active/archive IDs before allocating a number.
+fid:
+  auto_create: true
+  severity_levels: ['critical', 'high', 'medium', 'low']
+  max_open_fids: 20
+
+# Optional harness sandbox compatibility setting; local permissions are governed
+# by the active execution environment. This is not a second protocol identity.
+savant:
+  sandbox:
+    permissionMode: 'prompt' # safe | prompt | unsafe
+
+# Authoritative single-agent identity; never fall back to the harness namespace.
+# strict_mode may be relaxed only for operator-led interactive debugging.
+single_agent:
+  protocol:
+    version: '0.1.2-single-agent'
+    strict_mode: true
+
+# Perfection Loop policy applies to the FID before complex implementation.
+# Reaching a breaker requires review; it never authorizes dropping active work.
+perfection_loop:
+  max_iterations: 10
+  change_threshold: 0.10
+  convergence_threshold: 0.02
+  convergence_passes: 2
+  oscillation_limit: 3
+
+# Session policy: see echo-v0.1.2-single-agent.md, Automation Levels.
+# 1 = Guided; 2 = Supervised; 3 = Autonomous. This value is the session ceiling.
+# Level-1 items always require approval; other item levels must not exceed it.
+# At level 3, present impacts in the FID, SCOPE.md, and CHANGELOG before acting.
+# No level permits scripted project edits, unverified work, unilateral scope
+# reduction, or lifting version-control, credential, and directory invariants.
+# Checkpoint intervals never authorize stopping or dropping approved work.
+session:
+  auto_summary: true
+  summary_interval: 30
+  max_session_hours: 4
+  autonomy_level: 3 # 1=Guided, 2=Supervised, 3=Autonomous (default)
+
+# Optional harness settings below are retained for compatibility.
+# The typed config reader consumes the core policy above. No compactor, telemetry
+# sink, provenance recorder, dedicated YAGNI gate or erosion gate is installed.
+# Optional settings are policy, not evidence of running machinery.
+compression:
+  enabled: true
+  microCompact: false
+  keepRecentTokens: 16384
+  autoCompactRatio: 0.8
+  forceCompactOffset: 15000
+  microCompactMaxKeepRecent: 6
+  microCompactFloorTokens: null # No additional token floor.
+  idleCompaction:
+    enabled: false
+    idleAfterSeconds: 1800
+    floorTokens: 40000
+  model: null # Inherit the parent model; no dedicated summarizer override.
+  summary:
+    requiredSections: true
+    exactIdentifiers: strict
+
+yagni:
+  enforced: true # Policy requirement; no local gate is claimed.
+  ledger: dev/YAGNI-LEDGER.md
+
+caveman:
+  enabled: false
+  autoClarity: true # code blocks/paths/errors/security stay byte-exact
+
+telemetry:
+  enabled: true
+  cacheHitAlertDrop: 0.3 # alert when cached-token ratio drops 30+ points
+
+provenance:
+  mode: 'record' # off | record | enforce
+
+# Register lifecycle hooks only when their runtime and targets exist.
+# Session summaries and scope accounting remain required without hooks.
+hooks: []
+
+erosion:
+  enabled: true
+  structural_threshold_pct: 5
+  verbosity_threshold_pct: 25
